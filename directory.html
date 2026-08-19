@@ -1,8 +1,144 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Surgeon directory — OpenSurgery</title><link rel="stylesheet" href="styles.css" /><script src="script.js" defer></script></head><body>
-<header class="site-header"><button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button><a class="wordmark" href="home.html"><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong><small>The community surgeon guide</small></span></a><form class="search" action="search.html"><input name="q" type="search" placeholder="Search OpenSurgery" aria-label="Search OpenSurgery" /><button>Search</button></form><nav class="account-links"><a href="create-account.html">Create account</a><a href="login.html">Log in</a></nav></header>
-<main class="listing-shell"><header class="listing-header"><span>Community directory</span><h1>Find a surgeon</h1><p>Browse community-maintained profiles and narrow results by procedure or location.</p></header><form class="directory-filters" data-directory-filters><label>Search<input type="search" name="name" placeholder="Name or practice" /></label><label>Procedure<select name="procedure"><option value="">All procedures</option><option>Chest masculinization</option><option>Facial feminization surgery</option><option>Vaginoplasty</option><option>Phalloplasty</option></select></label><label>Country<select name="country"><option value="">All countries</option><option>United States</option><option>Canada</option><option>United Kingdom</option><option>Thailand</option></select></label><label class="check-label"><input type="checkbox" name="longterm" /><span>Has 1-year photo reviews</span></label><button type="submit">Apply filters</button></form><div class="listing-summary"><strong>6 surgeon profiles</strong><span>Sorted by recently updated</span></div><section class="directory-results">
-<article data-name="Mara Voss" data-procedure="Chest masculinization" data-country="United States" data-longterm="true"><div class="directory-avatar">MV</div><div><h2><a href="index.html">Mara Voss</a></h2><p>Plastic and reconstructive surgeon · Portland, Oregon, United States</p><ul><li>Chest masculinization</li><li>Chest revision</li></ul><span>38 reviews · 14 with 1-year update</span></div><a class="row-action" href="index.html">View profile →</a></article>
-<article data-name="Adrian Lee" data-procedure="Facial feminization surgery" data-country="Canada" data-longterm="true"><div class="directory-avatar">AL</div><div><h2><a href="surgeon.html?surgeon=adrian">Adrian Lee</a></h2><p>Craniofacial surgeon · Toronto, Ontario, Canada</p><ul><li>Facial feminization surgery</li><li>Facial revision</li></ul><span>21 reviews · 7 with 1-year update</span></div><a class="row-action" href="surgeon.html?surgeon=adrian">View profile →</a></article>
-<article data-name="Samira Khan" data-procedure="Chest masculinization" data-country="United Kingdom" data-longterm="false"><div class="directory-avatar">SK</div><div><h2><a href="surgeon.html?surgeon=samira">Samira Khan</a></h2><p>Plastic surgeon · Manchester, United Kingdom</p><ul><li>Chest masculinization</li><li>Breast augmentation</li></ul><span>17 reviews · 4 with 1-year update</span></div><a class="row-action" href="surgeon.html?surgeon=samira">View profile →</a></article>
-<article data-name="Narin Chai" data-procedure="Vaginoplasty" data-country="Thailand" data-longterm="true"><div class="directory-avatar">NC</div><div><h2><a href="surgeon.html?surgeon=narin">Narin Chai</a></h2><p>Gender-affirming surgeon · Bangkok, Thailand</p><ul><li>Vaginoplasty</li><li>Revision surgery</li></ul><span>52 reviews · 20 with 1-year update</span></div><a class="row-action" href="surgeon.html?surgeon=narin">View profile →</a></article>
-</section><p class="empty-results" hidden>No profiles match those filters.</p></main><footer class="site-footer"><nav><a href="about.html">About</a><a href="policies.html#editorial">Editorial policy</a><a href="privacy.html">Privacy</a><a href="guidelines.html">Community guidelines</a><a href="contact.html">Contact</a></nav></footer></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Surgeon directory — OpenSurgery</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span></button
+      ><a class="wordmark" href="home.html"
+        ><span class="wordmark__symbol">O</span
+        ><span><strong>OpenSurgery</strong><small>The community surgeon guide</small></span></a
+      >
+      <form class="search" action="search.html">
+        <input
+          name="q"
+          type="search"
+          placeholder="Search OpenSurgery"
+          aria-label="Search OpenSurgery"
+        /><button>Search</button>
+      </form>
+      <nav class="account-links">
+        <a href="create-account.html">Create account</a><a href="login.html">Log in</a>
+      </nav>
+    </header>
+    <main class="listing-shell">
+      <header class="listing-header">
+        <span>Community directory</span>
+        <h1>Find a surgeon</h1>
+        <p>Browse community-maintained profiles and narrow results by procedure or location.</p>
+      </header>
+      <form class="directory-filters" data-directory-filters>
+        <label>Search<input type="search" name="name" placeholder="Name or practice" /></label
+        ><label
+          >Procedure<select name="procedure">
+            <option value="">All procedures</option>
+            <option>Chest masculinization</option>
+            <option>Facial feminization surgery</option>
+            <option>Vaginoplasty</option>
+            <option>Phalloplasty</option>
+          </select></label
+        ><label
+          >Country<select name="country">
+            <option value="">All countries</option>
+            <option>United States</option>
+            <option>Canada</option>
+            <option>United Kingdom</option>
+            <option>Thailand</option>
+          </select></label
+        ><label class="check-label"
+          ><input type="checkbox" name="longterm" /><span>Has 1-year photo reviews</span></label
+        ><button type="submit">Apply filters</button>
+      </form>
+      <div class="listing-summary">
+        <strong>6 surgeon profiles</strong><span>Sorted by recently updated</span>
+      </div>
+      <section class="directory-results">
+        <article
+          data-name="Mara Voss"
+          data-procedure="Chest masculinization"
+          data-country="United States"
+          data-longterm="true"
+        >
+          <div class="directory-avatar">MV</div>
+          <div>
+            <h2><a href="index.html">Mara Voss</a></h2>
+            <p>Plastic and reconstructive surgeon · Portland, Oregon, United States</p>
+            <ul>
+              <li>Chest masculinization</li>
+              <li>Chest revision</li>
+            </ul>
+            <span>38 reviews · 14 with 1-year update</span>
+          </div>
+          <a class="row-action" href="index.html">View profile →</a>
+        </article>
+        <article
+          data-name="Adrian Lee"
+          data-procedure="Facial feminization surgery"
+          data-country="Canada"
+          data-longterm="true"
+        >
+          <div class="directory-avatar">AL</div>
+          <div>
+            <h2><a href="surgeon.html?surgeon=adrian">Adrian Lee</a></h2>
+            <p>Craniofacial surgeon · Toronto, Ontario, Canada</p>
+            <ul>
+              <li>Facial feminization surgery</li>
+              <li>Facial revision</li>
+            </ul>
+            <span>21 reviews · 7 with 1-year update</span>
+          </div>
+          <a class="row-action" href="surgeon.html?surgeon=adrian">View profile →</a>
+        </article>
+        <article
+          data-name="Samira Khan"
+          data-procedure="Chest masculinization"
+          data-country="United Kingdom"
+          data-longterm="false"
+        >
+          <div class="directory-avatar">SK</div>
+          <div>
+            <h2><a href="surgeon.html?surgeon=samira">Samira Khan</a></h2>
+            <p>Plastic surgeon · Manchester, United Kingdom</p>
+            <ul>
+              <li>Chest masculinization</li>
+              <li>Breast augmentation</li>
+            </ul>
+            <span>17 reviews · 4 with 1-year update</span>
+          </div>
+          <a class="row-action" href="surgeon.html?surgeon=samira">View profile →</a>
+        </article>
+        <article
+          data-name="Narin Chai"
+          data-procedure="Vaginoplasty"
+          data-country="Thailand"
+          data-longterm="true"
+        >
+          <div class="directory-avatar">NC</div>
+          <div>
+            <h2><a href="surgeon.html?surgeon=narin">Narin Chai</a></h2>
+            <p>Gender-affirming surgeon · Bangkok, Thailand</p>
+            <ul>
+              <li>Vaginoplasty</li>
+              <li>Revision surgery</li>
+            </ul>
+            <span>52 reviews · 20 with 1-year update</span>
+          </div>
+          <a class="row-action" href="surgeon.html?surgeon=narin">View profile →</a>
+        </article>
+      </section>
+      <p class="empty-results" hidden>No profiles match those filters.</p>
+    </main>
+    <footer class="site-footer">
+      <nav>
+        <a href="policies.html#editorial">Editorial policy</a><a href="privacy.html">Privacy</a
+        ><a href="guidelines.html">Community guidelines</a><a href="contact.html">Contact</a>
+      </nav>
+    </footer>
+  </body>
+</html>

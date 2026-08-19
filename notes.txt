@@ -16,4 +16,16 @@ CASES TO READ
     Two Pesos, Inc. v. Taco Cabana, Inc., 505 U.S. 763 (Trade dress)
     Wal-Mart Stores, Inc. v. Samara Brothers, Inc., 529 U.S. 205 (Product design vs packaging)
     TrafFix Devices, Inc. v. Marketing Displays, Inc., 532 U.S. 23 (Case that established that functional parts cannot be barred under trademark law)
-    
+
+add block feature
+
+use wayback machine to check out facebook v1.
+    theory:
+        as the internet was new, people made unsophisticated sites.
+        those sites were revolutionairy, but then grew more sophisticated in design.
+        at their core they were just fancy databases though.
+        as ai makes that design now easier we are back in that early internet age.
+        the thing you can design quickly can and will last if you get there first.
+        track the 1 to 1 on this time vs then.
+        figure out how the situation is similar and different
+add a "preparing for this surgeon" section

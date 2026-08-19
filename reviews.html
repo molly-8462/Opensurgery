@@ -11,7 +11,9 @@
   <body>
     <a class="skip-link" href="#reviews">Skip to reviews</a>
     <header class="site-header">
-      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span><span></span></button>
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
       <a class="wordmark" href="home.html" aria-label="OpenSurgery home">
         <span class="wordmark__symbol" aria-hidden="true">O</span>
         <span><strong>OpenSurgery</strong><small>The community surgeon guide</small></span>
@@ -21,106 +23,258 @@
         <input id="site-search" type="search" placeholder="Search OpenSurgery" />
         <button type="submit">Search</button>
       </form>
-      <nav class="account-links" aria-label="Account"><a href="create-account.html">Create account</a><a href="login.html">Log in</a></nav>
+      <nav class="account-links" aria-label="Account">
+        <a href="create-account.html">Create account</a><a href="login.html">Log in</a>
+      </nav>
     </header>
 
     <aside class="banner-ad" aria-label="Advertisement placeholder">
-      <span>Advertisement</span><strong>Banner placement</strong><small>Reserved for a clearly identified sponsor</small>
+      <span>Advertisement</span><strong>Banner placement</strong
+      ><small>Reserved for a clearly identified sponsor</small>
     </aside>
 
     <div class="page-grid reviews-grid">
       <aside class="review-sidebar" aria-label="Review overview">
         <strong>38 reviews</strong>
         <dl>
-          <div><dt>With 1-year update</dt><dd>14</dd></div>
-          <div><dt>Missing update</dt><dd>24</dd></div>
+          <div>
+            <dt>With 1-year update</dt>
+            <dd>14</dd>
+          </div>
+          <div>
+            <dt>Missing update</dt>
+            <dd>24</dd>
+          </div>
         </dl>
         <a href="#review-policy">How reviews work</a>
         <aside class="sidebar-ad" aria-label="Advertisement placeholder">
-          <span>Advertisement</span><strong>Sidebar placement</strong><small>Contextual sponsorship only</small>
+          <span>Advertisement</span><strong>Sidebar placement</strong
+          ><small>Contextual sponsorship only</small>
         </aside>
       </aside>
 
       <main id="reviews" class="article reviews-page">
-        <div class="breadcrumb"><a href="directory.html">Surgeons</a> <span>›</span> <a href="directory.html?country=United%20States">United States</a></div>
+        <div class="breadcrumb">
+          <a href="directory.html">Surgeons</a> <span>›</span>
+          <a href="directory.html?country=United%20States">United States</a>
+        </div>
         <header class="article-header">
           <div class="title-row"><h1>Mara Voss</h1></div>
           <p class="subtitle">Fictional American plastic and reconstructive surgeon</p>
           <div class="article-navigation">
             <nav aria-label="Page content">
               <a href="index.html">Info</a>
-              <a class="is-active" href="reviews.html" aria-current="page">Reviews <span class="count">38</span></a>
+              <a class="is-active" href="reviews.html" aria-current="page"
+                >Reviews <span class="count">38</span></a
+              >
               <a href="talk.html">Talk <span class="count">7</span></a>
             </nav>
-            <nav aria-label="Review actions"><a class="write-review-link" href="write-review.html">Write a review</a><button class="more-button" type="button" aria-label="More page tools">•••</button></nav>
+            <nav aria-label="Review actions">
+              <a class="write-review-link" href="write-review.html">Write a review</a
+              ><button class="more-button" type="button" aria-label="More page tools">•••</button>
+            </nav>
           </div>
         </header>
 
-        <div class="prototype-note"><strong>Demonstration page:</strong> All reviews, users, dates, and images shown below are fictional.</div>
+        <div class="prototype-note">
+          <strong>Demonstration page:</strong> All reviews, users, dates, and images shown below are
+          fictional.
+        </div>
 
         <section class="reviews-intro" aria-labelledby="reviews-heading">
           <div>
             <h2 id="reviews-heading">Patient reviews</h2>
-            <p>First-person experiences from community members. Reviews with a long-term photo update are shown first.</p>
+            <p>
+              First-person experiences from community members. Reviews with a long-term photo update
+              are shown first.
+            </p>
           </div>
-          <button class="photo-toggle" type="button" aria-pressed="false"><span aria-hidden="true">◉</span> Show surgical photos</button>
+          <button class="photo-toggle" type="button" aria-pressed="false">
+            <span aria-hidden="true">◉</span> Show surgical photos
+          </button>
         </section>
 
         <form class="review-controls" aria-label="Filter and sort reviews">
-          <label>Procedure<select><option>All procedures</option><option>Chest masculinization</option><option>Chest revision</option></select></label>
-          <label>Technique<select><option>All techniques</option><option>Double incision</option><option>Periareolar</option><option>Buttonhole</option></select></label>
-          <label>Sort<select><option>Long-term updates first</option><option>Newest reviews</option><option>Surgery date: newest</option></select></label>
+          <label
+            >Procedure<select>
+              <option>All procedures</option>
+              <option>Chest masculinization</option>
+              <option>Chest revision</option>
+            </select></label
+          >
+          <label
+            >Technique<select>
+              <option>All techniques</option>
+              <option>Double incision</option>
+              <option>Periareolar</option>
+              <option>Buttonhole</option>
+            </select></label
+          >
+          <label
+            >Sort<select>
+              <option>Long-term updates first</option>
+              <option>Newest reviews</option>
+              <option>Surgery date: newest</option>
+            </select></label
+          >
           <button type="button">Apply</button>
         </form>
 
         <section class="review-group" aria-labelledby="long-term-heading">
           <header class="review-group__header">
-            <div><h2 id="long-term-heading">Includes 1-year update</h2><span>14 reviews</span></div>
-            <p>These reviews include a photo identified by the reviewer as taken at least one year after surgery.</p>
+            <div>
+              <h2 id="long-term-heading">Includes 1-year update</h2>
+              <span>14 reviews</span>
+            </div>
+            <p>
+              These reviews include a photo identified by the reviewer as taken at least one year
+              after surgery.
+            </p>
           </header>
 
           <article class="review-row">
-            <a class="review-row__body" href="review.html?review=river" aria-label="Read full review by RiverNorth">
-              <div class="review-byline"><span class="user-avatar">R</span><div><strong>RiverNorth</strong><span>Reviewed 18 April 2026</span></div></div>
+            <a
+              class="review-row__body"
+              href="review.html?review=river"
+              aria-label="Read full review by RiverNorth"
+            >
+              <div class="review-byline">
+                <span class="user-avatar">R</span>
+                <div><strong>RiverNorth</strong><span>Reviewed 18 April 2026</span></div>
+              </div>
               <dl class="review-meta">
-                <div><dt>Procedure</dt><dd>Chest masculinization</dd></div><div><dt>Technique</dt><dd>Double incision</dd></div><div><dt>Surgery</dt><dd>February 2024</dd></div>
+                <div>
+                  <dt>Procedure</dt>
+                  <dd>Chest masculinization</dd>
+                </div>
+                <div>
+                  <dt>Technique</dt>
+                  <dd>Double incision</dd>
+                </div>
+                <div>
+                  <dt>Surgery</dt>
+                  <dd>February 2024</dd>
+                </div>
               </dl>
-              <p>“The office was straightforward about scheduling and recovery. I traveled from another state and stayed nearby for nine days…”</p>
+              <p>
+                “The office was straightforward about scheduling and recovery. I traveled from
+                another state and stayed nearby for nine days…”
+              </p>
               <span class="read-more">Read full review <span aria-hidden="true">→</span></span>
             </a>
             <div class="review-photos">
-              <button class="photo-slot has-photo" type="button" aria-label="Show early recovery photo from two weeks after surgery"><span class="photo-art photo-art--early"></span><span><strong>Early recovery</strong><small>2 weeks</small></span></button>
-              <button class="photo-slot has-photo long-term" type="button" aria-label="Show long-term photo from fourteen months after surgery"><span class="photo-art photo-art--late"></span><span><strong>1-year update</strong><small>14 months</small></span></button>
+              <button
+                class="photo-slot has-photo"
+                type="button"
+                aria-label="Show early recovery photo from two weeks after surgery"
+              >
+                <span class="photo-art photo-art--early"></span
+                ><span><strong>Early recovery</strong><small>2 weeks</small></span>
+              </button>
+              <button
+                class="photo-slot has-photo long-term"
+                type="button"
+                aria-label="Show long-term photo from fourteen months after surgery"
+              >
+                <span class="photo-art photo-art--late"></span
+                ><span><strong>1-year update</strong><small>14 months</small></span>
+              </button>
             </div>
           </article>
 
           <article class="review-row">
-            <a class="review-row__body" href="review.html?review=ash" aria-label="Read full review by AshAndPine">
-              <div class="review-byline"><span class="user-avatar">A</span><div><strong>AshAndPine</strong><span>Reviewed 2 March 2026</span></div></div>
+            <a
+              class="review-row__body"
+              href="review.html?review=ash"
+              aria-label="Read full review by AshAndPine"
+            >
+              <div class="review-byline">
+                <span class="user-avatar">A</span>
+                <div><strong>AshAndPine</strong><span>Reviewed 2 March 2026</span></div>
+              </div>
               <dl class="review-meta">
-                <div><dt>Procedure</dt><dd>Chest masculinization</dd></div><div><dt>Technique</dt><dd>Periareolar</dd></div><div><dt>Surgery</dt><dd>August 2022</dd></div>
+                <div>
+                  <dt>Procedure</dt>
+                  <dd>Chest masculinization</dd>
+                </div>
+                <div>
+                  <dt>Technique</dt>
+                  <dd>Periareolar</dd>
+                </div>
+                <div>
+                  <dt>Surgery</dt>
+                  <dd>August 2022</dd>
+                </div>
               </dl>
-              <p>“My consultation was detailed and I never felt hurried. The first few months were uneven, but things settled considerably…”</p>
+              <p>
+                “My consultation was detailed and I never felt hurried. The first few months were
+                uneven, but things settled considerably…”
+              </p>
               <span class="read-more">Read full review <span aria-hidden="true">→</span></span>
             </a>
             <div class="review-photos">
-              <div class="photo-slot optional-empty"><span class="empty-icon" aria-hidden="true">—</span><span><strong>Early recovery</strong><small>Not added</small></span></div>
-              <button class="photo-slot has-photo long-term" type="button" aria-label="Show long-term photo from three years after surgery"><span class="photo-art photo-art--late-two"></span><span><strong>1-year update</strong><small>3 years</small></span></button>
+              <div class="photo-slot optional-empty">
+                <span class="empty-icon" aria-hidden="true">—</span
+                ><span><strong>Early recovery</strong><small>Not added</small></span>
+              </div>
+              <button
+                class="photo-slot has-photo long-term"
+                type="button"
+                aria-label="Show long-term photo from three years after surgery"
+              >
+                <span class="photo-art photo-art--late-two"></span
+                ><span><strong>1-year update</strong><small>3 years</small></span>
+              </button>
             </div>
           </article>
 
           <article class="review-row">
-            <a class="review-row__body" href="review.html?review=finch" aria-label="Read full review by FinchWest">
-              <div class="review-byline"><span class="user-avatar">F</span><div><strong>FinchWest</strong><span>Reviewed 11 February 2026</span></div></div>
+            <a
+              class="review-row__body"
+              href="review.html?review=finch"
+              aria-label="Read full review by FinchWest"
+            >
+              <div class="review-byline">
+                <span class="user-avatar">F</span>
+                <div><strong>FinchWest</strong><span>Reviewed 11 February 2026</span></div>
+              </div>
               <dl class="review-meta">
-                <div><dt>Procedure</dt><dd>Chest revision</dd></div><div><dt>Technique</dt><dd>Scar revision</dd></div><div><dt>Surgery</dt><dd>November 2023</dd></div>
+                <div>
+                  <dt>Procedure</dt>
+                  <dd>Chest revision</dd>
+                </div>
+                <div>
+                  <dt>Technique</dt>
+                  <dd>Scar revision</dd>
+                </div>
+                <div>
+                  <dt>Surgery</dt>
+                  <dd>November 2023</dd>
+                </div>
               </dl>
-              <p>“This was a revision after surgery elsewhere. Communication before the procedure was good, though responses slowed afterward…”</p>
+              <p>
+                “This was a revision after surgery elsewhere. Communication before the procedure was
+                good, though responses slowed afterward…”
+              </p>
               <span class="read-more">Read full review <span aria-hidden="true">→</span></span>
             </a>
             <div class="review-photos">
-              <button class="photo-slot has-photo" type="button" aria-label="Show early recovery photo from one month after surgery"><span class="photo-art photo-art--early-two"></span><span><strong>Early recovery</strong><small>1 month</small></span></button>
-              <button class="photo-slot has-photo long-term" type="button" aria-label="Show long-term photo from eighteen months after surgery"><span class="photo-art photo-art--late-three"></span><span><strong>1-year update</strong><small>18 months</small></span></button>
+              <button
+                class="photo-slot has-photo"
+                type="button"
+                aria-label="Show early recovery photo from one month after surgery"
+              >
+                <span class="photo-art photo-art--early-two"></span
+                ><span><strong>Early recovery</strong><small>1 month</small></span>
+              </button>
+              <button
+                class="photo-slot has-photo long-term"
+                type="button"
+                aria-label="Show long-term photo from eighteen months after surgery"
+              >
+                <span class="photo-art photo-art--late-three"></span
+                ><span><strong>1-year update</strong><small>18 months</small></span>
+              </button>
             </div>
           </article>
 
@@ -131,37 +285,98 @@
 
         <section class="review-group incomplete-group" aria-labelledby="missing-heading">
           <header class="review-group__header">
-            <div><h2 id="missing-heading">Missing 1-year update</h2><span>24 reviews</span></div>
+            <div>
+              <h2 id="missing-heading">Missing 1-year update</h2>
+              <span>24 reviews</span>
+            </div>
             <p>These reviews do not currently include a photo identified as one year or later.</p>
           </header>
 
           <article class="review-row">
-            <a class="review-row__body" href="review.html?review=moss" aria-label="Read full review by MossGarden">
-              <div class="review-byline"><span class="user-avatar">M</span><div><strong>MossGarden</strong><span>Reviewed 27 May 2026</span></div></div>
+            <a
+              class="review-row__body"
+              href="review.html?review=moss"
+              aria-label="Read full review by MossGarden"
+            >
+              <div class="review-byline">
+                <span class="user-avatar">M</span>
+                <div><strong>MossGarden</strong><span>Reviewed 27 May 2026</span></div>
+              </div>
               <dl class="review-meta">
-                <div><dt>Procedure</dt><dd>Chest masculinization</dd></div><div><dt>Technique</dt><dd>Double incision</dd></div><div><dt>Surgery</dt><dd>March 2026</dd></div>
+                <div>
+                  <dt>Procedure</dt>
+                  <dd>Chest masculinization</dd>
+                </div>
+                <div>
+                  <dt>Technique</dt>
+                  <dd>Double incision</dd>
+                </div>
+                <div>
+                  <dt>Surgery</dt>
+                  <dd>March 2026</dd>
+                </div>
               </dl>
-              <p>“I am still early in recovery, but the clinic prepared me well for drains and mobility restrictions. I plan to add another update…”</p>
+              <p>
+                “I am still early in recovery, but the clinic prepared me well for drains and
+                mobility restrictions. I plan to add another update…”
+              </p>
               <span class="read-more">Read full review <span aria-hidden="true">→</span></span>
             </a>
             <div class="review-photos">
-              <button class="photo-slot has-photo" type="button" aria-label="Show early recovery photo from three weeks after surgery"><span class="photo-art photo-art--early-three"></span><span><strong>Early recovery</strong><small>3 weeks</small></span></button>
-              <div class="photo-slot missing-photo"><span class="empty-icon" aria-hidden="true">＋</span><span><strong>1-year update</strong><small>Not added yet</small></span></div>
+              <button
+                class="photo-slot has-photo"
+                type="button"
+                aria-label="Show early recovery photo from three weeks after surgery"
+              >
+                <span class="photo-art photo-art--early-three"></span
+                ><span><strong>Early recovery</strong><small>3 weeks</small></span>
+              </button>
+              <div class="photo-slot missing-photo">
+                <span class="empty-icon" aria-hidden="true">＋</span
+                ><span><strong>1-year update</strong><small>Not added yet</small></span>
+              </div>
             </div>
           </article>
 
           <article class="review-row">
-            <a class="review-row__body" href="review.html?review=cedar" aria-label="Read full review by BlueCedar">
-              <div class="review-byline"><span class="user-avatar">B</span><div><strong>BlueCedar</strong><span>Reviewed 6 January 2026</span></div></div>
+            <a
+              class="review-row__body"
+              href="review.html?review=cedar"
+              aria-label="Read full review by BlueCedar"
+            >
+              <div class="review-byline">
+                <span class="user-avatar">B</span>
+                <div><strong>BlueCedar</strong><span>Reviewed 6 January 2026</span></div>
+              </div>
               <dl class="review-meta">
-                <div><dt>Procedure</dt><dd>Chest masculinization</dd></div><div><dt>Technique</dt><dd>Buttonhole</dd></div><div><dt>Surgery</dt><dd>June 2024</dd></div>
+                <div>
+                  <dt>Procedure</dt>
+                  <dd>Chest masculinization</dd>
+                </div>
+                <div>
+                  <dt>Technique</dt>
+                  <dd>Buttonhole</dd>
+                </div>
+                <div>
+                  <dt>Surgery</dt>
+                  <dd>June 2024</dd>
+                </div>
               </dl>
-              <p>“Travel coordination was the hardest part. The surgical team was kind, and the written recovery instructions were useful…”</p>
+              <p>
+                “Travel coordination was the hardest part. The surgical team was kind, and the
+                written recovery instructions were useful…”
+              </p>
               <span class="read-more">Read full review <span aria-hidden="true">→</span></span>
             </a>
             <div class="review-photos">
-              <div class="photo-slot optional-empty"><span class="empty-icon" aria-hidden="true">—</span><span><strong>Early recovery</strong><small>Not added</small></span></div>
-              <div class="photo-slot missing-photo"><span class="empty-icon" aria-hidden="true">＋</span><span><strong>1-year update</strong><small>Not added</small></span></div>
+              <div class="photo-slot optional-empty">
+                <span class="empty-icon" aria-hidden="true">—</span
+                ><span><strong>Early recovery</strong><small>Not added</small></span>
+              </div>
+              <div class="photo-slot missing-photo">
+                <span class="empty-icon" aria-hidden="true">＋</span
+                ><span><strong>1-year update</strong><small>Not added</small></span>
+              </div>
             </div>
           </article>
 
@@ -170,10 +385,19 @@
 
         <section id="review-policy" class="review-policy">
           <h2>About these reviews</h2>
-          <p>Reviews are personal accounts, not verified medical outcomes. A 1-year label reflects the date supplied by the reviewer and does not confirm authenticity or quality. <a href="policies.html#review-policy">Read the review and photo policy.</a></p>
+          <p>
+            Reviews are personal accounts, not verified medical outcomes. A 1-year label reflects
+            the date supplied by the reviewer and does not confirm authenticity or quality.
+            <a href="policies.html#review-policy">Read the review and photo policy.</a>
+          </p>
         </section>
       </main>
     </div>
-    <footer class="site-footer"><nav><a href="about.html">About</a><a href="policies.html">Editorial policy</a><a href="privacy.html">Privacy</a><a href="guidelines.html">Community guidelines</a><a href="contact.html">Contact</a></nav></footer>
+    <footer class="site-footer">
+      <nav>
+        <a href="policies.html">Editorial policy</a><a href="privacy.html">Privacy</a
+        ><a href="guidelines.html">Community guidelines</a><a href="contact.html">Contact</a>
+      </nav>
+    </footer>
   </body>
 </html>

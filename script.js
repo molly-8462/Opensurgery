@@ -106,7 +106,7 @@ if (menuButton) {
   drawer.className = "nav-drawer";
   drawer.id = "site-navigation";
   drawer.setAttribute("aria-hidden", "true");
-  drawer.innerHTML = `<div class="nav-drawer__top"><a class="wordmark" href="home.html"><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong><small>Community surgeon guide</small></span></a><button type="button" aria-label="Close navigation">×</button></div><nav aria-label="Main navigation"><strong>Explore</strong><a href="home.html">Home</a><a href="directory.html">Surgeon directory</a><a href="procedures.html">Procedure guides</a><a href="search.html">Search</a><strong>Contribute</strong><a href="write-review.html">Write a review</a><a href="pending.html">Pending edits</a><a href="guidelines.html">Community guidelines</a><strong>Your space</strong><a href="account.html">Account dashboard</a><a href="messages.html">Messages</a><a href="settings.html">Settings</a></nav><footer><a href="about.html">About</a><a href="policies.html">Policies</a><a href="contact.html">Contact</a></footer>`;
+  drawer.innerHTML = `<div class="nav-drawer__top"><a class="wordmark" href="home.html"><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong><small>Community surgeon guide</small></span></a><button type="button" aria-label="Close navigation">×</button></div><nav aria-label="Main navigation"><strong>Explore</strong><a href="home.html">Home</a><a href="directory.html">Surgeon directory</a><a href="procedures.html">Procedure guides</a><a href="search.html">Search</a><strong>Contribute</strong><a href="write-review.html">Write a review</a><a href="pending.html">Pending edits</a><a href="guidelines.html">Community guidelines</a><strong>Your space</strong><a href="account.html">Account dashboard</a><a href="messages.html">Messages</a><a href="settings.html">Settings</a></nav><footer><a href="policies.html">Policies</a><a href="contact.html">Contact</a></footer>`;
   const backdrop = document.createElement("button");
   backdrop.className = "nav-backdrop";
   backdrop.type = "button";
@@ -268,6 +268,97 @@ const contactSubject = queryParams.get("subject");
 const contactSubjectInput = document.querySelector(".contact-shell input[type='text']");
 if (contactSubject && contactSubjectInput) contactSubjectInput.value = contactSubject;
 
+const showInlineMenu = (button, items) => {
+  const existing = document.querySelector(".prototype-menu");
+  if (existing) {
+    const sameOwner = existing.dataset.owner === button.dataset.menuOwner;
+    existing.remove();
+    button.setAttribute("aria-expanded", "false");
+    if (sameOwner) return;
+  }
+  if (!button.dataset.menuOwner) button.dataset.menuOwner = `menu-${Math.random().toString(36).slice(2)}`;
+  const menu = document.createElement("div");
+  menu.className = "prototype-menu";
+  menu.dataset.owner = button.dataset.menuOwner;
+  menu.setAttribute("role", "menu");
+  items.forEach(({ label, href }) => {
+    const link = document.createElement("a");
+    link.href = href;
+    link.textContent = label;
+    link.setAttribute("role", "menuitem");
+    menu.append(link);
+  });
+  button.setAttribute("aria-expanded", "true");
+  button.insertAdjacentElement("afterend", menu);
+  menu.querySelector("a")?.focus();
+};
+
+document.querySelectorAll(".language-button").forEach((button) => {
+  button.setAttribute("aria-haspopup", "menu");
+  button.setAttribute("aria-expanded", "false");
+  button.addEventListener("click", () => showInlineMenu(button, [{ label: "English", href: window.location.pathname + window.location.search }]));
+});
+
+document.querySelectorAll(".more-button").forEach((button) => {
+  button.setAttribute("aria-haspopup", "menu");
+  button.setAttribute("aria-expanded", "false");
+  button.addEventListener("click", () => showInlineMenu(button, [
+    { label: "View history", href: document.querySelector("a[href*='history.html']")?.href || "history.html" },
+    { label: "Community guidelines", href: "guidelines.html" },
+  ]));
+});
+
+const resultTabs = document.querySelectorAll(".result-tabs button");
+resultTabs.forEach((button) => button.addEventListener("click", () => {
+  resultTabs.forEach((tab) => { tab.classList.remove("is-active"); tab.setAttribute("aria-selected", "false"); });
+  button.classList.add("is-active");
+  button.setAttribute("aria-selected", "true");
+  const category = button.textContent.trim().toLowerCase();
+  let visible = 0;
+  document.querySelectorAll(".search-result-list article").forEach((result) => {
+    const type = result.querySelector(":scope > span")?.textContent.toLowerCase() || "";
+    const matches = category === "all" || type.includes(category.replace(/s$/, ""));
+    result.hidden = !matches;
+    if (matches) visible += 1;
+  });
+  const summary = document.querySelector("[data-search-summary]");
+  if (summary) summary.textContent = `${visible} ${category === "all" ? "matching results" : `${category} result${visible === 1 ? "" : "s"}`}.`;
+}));
+
+const historyFilters = document.querySelector(".history-filters");
+historyFilters?.querySelector("button")?.addEventListener("click", () => {
+  const data = new FormData(historyFilters);
+  const fromDate = String(data.get("from_date") || "");
+  const editor = String(data.get("editor") || "").trim().toLowerCase();
+  const changeType = String(data.get("change_type") || "All changes").toLowerCase();
+  let visible = 0;
+  document.querySelectorAll(".history-list .revision").forEach((revision) => {
+    const revisionEditor = revision.querySelector(".revision-meta a")?.textContent.toLowerCase() || "";
+    const revisionType = revision.querySelector(".revision-meta span:last-child")?.textContent.toLowerCase() || "";
+    const time = revision.querySelector(".revision-title a")?.textContent || "";
+    const parsedDate = new Date(time.replace(" at ", " "));
+    const matchesDate = !fromDate || (!Number.isNaN(parsedDate.valueOf()) && parsedDate >= new Date(`${fromDate}T00:00:00`));
+    const matches = matchesDate && (!editor || revisionEditor.includes(editor)) && (changeType === "all changes" || revisionType === changeType);
+    revision.hidden = !matches;
+    if (matches) visible += 1;
+  });
+  const pagination = document.querySelector(".history-pagination span");
+  if (pagination) pagination.textContent = `Showing ${visible} matching revision${visible === 1 ? "" : "s"}`;
+});
+
+document.querySelector(".history-pagination button:last-child")?.addEventListener("click", (event) => {
+  event.currentTarget.textContent = "Older revisions require the history API";
+  event.currentTarget.disabled = true;
+});
+
+document.querySelectorAll(".pending-shell button, .proposal-list button").forEach((button) => {
+  button.addEventListener("click", () => {
+    const proposal = button.closest("article");
+    const destination = button.textContent.includes("Review") ? proposal?.querySelector("a[href*='revision.html']") : proposal?.querySelector("a[href*='talk.html']");
+    if (destination) window.location.href = destination.href;
+  });
+});
+
 document.querySelectorAll(".conversation-list button").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll(".conversation-list button").forEach((item) => item.classList.remove("is-active"));
@@ -278,6 +369,31 @@ document.querySelectorAll(".conversation-list button").forEach((button) => {
     if (headerName) headerName.textContent = person;
     if (profileLink) profileLink.href = `profile.html?user=${encodeURIComponent(person)}`;
   });
+});
+
+document.querySelectorAll(".topic-heading button[aria-label='Topic tools']").forEach((button) => {
+  button.setAttribute("aria-haspopup", "menu");
+  button.setAttribute("aria-expanded", "false");
+  button.addEventListener("click", () => showInlineMenu(button, [
+    { label: "Reply to topic", href: "#new-topic" },
+    { label: "Talk guidelines", href: "policies.html#talk-policy" },
+  ]));
+});
+
+document.querySelectorAll(".talk-actions button").forEach((button) => {
+  if (!button.textContent.toLowerCase().startsWith("tools")) return;
+  button.setAttribute("aria-haspopup", "menu");
+  button.setAttribute("aria-expanded", "false");
+  button.addEventListener("click", () => showInlineMenu(button, [
+    { label: "View talk history", href: "talk-history.html" },
+    { label: "Talk guidelines", href: "policies.html#talk-policy" },
+  ]));
+});
+
+document.querySelector(".review-detail-footer button")?.addEventListener("click", (event) => {
+  event.currentTarget.textContent = "Thanks";
+  event.currentTarget.disabled = true;
+  event.currentTarget.setAttribute("aria-pressed", "true");
 });
 
 document.querySelectorAll("button").forEach((button) => {

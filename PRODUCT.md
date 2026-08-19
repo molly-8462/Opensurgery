@@ -175,7 +175,7 @@ The static frontend now implements a complete linked demonstration of the core p
 
 Forms and controls provide browser-side validation and honest demonstration states. Account identity is stored only in local browser storage, photo previews remain local, filters operate on the sample records, and download/copy/drawer controls work without a server. No form sends personal or medical information externally. Authentication, persistence, moderation, email delivery, uploads, and secure messaging still require the production backend described below; the frontend must not imply those services are active before they are connected.
 
-The distinct palette, wordmark, advertising treatment, and component styling are intentional product-identity choices. They reduce the chance that users could mistake OpenSurgery for an official Wikipedia/Wikimedia project and address the trade-dress concern created by borrowing familiar wiki information architecture. Before public launch, include a plain-language non-affiliation statement on the About page and have the final brand presentation reviewed in the operating jurisdiction.
+The distinct palette, wordmark, advertising treatment, and component styling are intentional product-identity choices. They reduce the chance that users could mistake OpenSurgery for an official Wikipedia/Wikimedia project and address the trade-dress concern created by borrowing familiar wiki information architecture. Before public launch, include a plain-language non-affiliation statement in the public policies and have the final brand presentation reviewed in the operating jurisdiction.
 
 ## Advertising and sponsorship
 
