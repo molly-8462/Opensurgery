@@ -87,14 +87,16 @@ Do not make every saved edit immediately authoritative. Use:
 
 1. A published surgeon revision.
 2. User-submitted edit proposals with an edit summary and sources.
-3. A public comparison between the proposed and current revision.
+3. A read-only preview of the proposed page and every published historical version; no side-by-side comparison interface.
 4. Approval, rejection, or rollback by trusted editors/moderators.
 5. A permanent audit trail that omits private moderator notes.
 6. A linked `Talk` section where contributors can discuss an article without placing editorial debate inside the factual record.
 
 New accounts should have tighter edit and upload limits. Trust can grow through account age and accepted contributions, but should not make a user immune from review.
 
-Every published revision should record its author, timestamp, edit summary, sources, and parent revision. Authorized editors must be able to compare any two revisions and roll the published page back without destroying later history. Talk comments also need authorship, timestamps, permalinks, moderation state, and their own non-destructive history. A more formal dispute-escalation system inspired by Wikipedia can be added after the core editing and moderation workflows are stable.
+Every published revision should record its author, timestamp, edit summary, sources, and parent revision. Anyone can open a read-only snapshot of an individual historical revision, while authorized editors can restore it by creating a new revision without destroying later history. Talk comments also need authorship, timestamps, permalinks, moderation state, and their own non-destructive history. A more formal dispute-escalation system inspired by Wikipedia can be added after the core editing and moderation workflows are stable.
+
+The public history view should list immutable published revisions with timestamps, contributor attribution, edit summaries, change types, and permanent links. Selecting a revision opens a read-only snapshot of the full page as it appeared at that time. Authorized actions such as undo and rollback create new revisions rather than deleting or rewriting old history. Clearly distinguish the current, reviewed, and rollback states, while keeping private moderation notes out of the public log.
 
 The surgeon editor should pair clear article-section text areas with structured profile fields. Practice and website links use URL validation; location is split into city, region, and country; procedures come from database-backed multi-select options; and portrait changes require an image upload plus a publication-rights confirmation. Every proposal requires at least one source URL, a note explaining what it supports, and an edit summary. Contributors may save a draft or preview changes before submitting the proposal for review. Clicking an article's section-level edit control should open the editor at that section.
 
@@ -166,6 +168,12 @@ Use one primary relational database for the MVP, not separate databases for Info
 - Keyboard navigation, clear focus states, semantic HTML, reduced-motion support, and WCAG AA contrast from the first prototype
 
 The first prototype should test a surgeon page—the densest and most important screen—before building a promotional homepage.
+
+## Frontend prototype status
+
+The static frontend now implements a complete linked demonstration of the core product. `home.html` is the public landing page and every OpenSurgery wordmark returns there. The menu drawer provides consistent access to discovery, contribution, account, messaging, policy, and support routes. The prototype includes account creation, login and recovery, account settings, public profiles, private-message screens, directory filters, search results, procedure guides, the complete Mara Voss Info/Reviews/Talk/Edit/History workflow, historical snapshots, proposal queue, review composition and detail pages, talk archives, and public policy/support pages.
+
+Forms and controls provide browser-side validation and honest demonstration states. Account identity is stored only in local browser storage, photo previews remain local, filters operate on the sample records, and download/copy/drawer controls work without a server. No form sends personal or medical information externally. Authentication, persistence, moderation, email delivery, uploads, and secure messaging still require the production backend described below; the frontend must not imply those services are active before they are connected.
 
 The distinct palette, wordmark, advertising treatment, and component styling are intentional product-identity choices. They reduce the chance that users could mistake OpenSurgery for an official Wikipedia/Wikimedia project and address the trade-dress concern created by borrowing familiar wiki information architecture. Before public launch, include a plain-language non-affiliation statement on the About page and have the final brand presentation reviewed in the operating jurisdiction.
 
