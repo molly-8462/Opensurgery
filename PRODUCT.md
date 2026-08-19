@@ -96,6 +96,8 @@ New accounts should have tighter edit and upload limits. Trust can grow through 
 
 Every published revision should record its author, timestamp, edit summary, sources, and parent revision. Authorized editors must be able to compare any two revisions and roll the published page back without destroying later history. Talk comments also need authorship, timestamps, permalinks, moderation state, and their own non-destructive history. A more formal dispute-escalation system inspired by Wikipedia can be added after the core editing and moderation workflows are stable.
 
+The surgeon editor should pair clear article-section text areas with structured profile fields. Practice and website links use URL validation; location is split into city, region, and country; procedures come from database-backed multi-select options; and portrait changes require an image upload plus a publication-rights confirmation. Every proposal requires at least one source URL, a note explaining what it supports, and an edit summary. Contributors may save a draft or preview changes before submitting the proposal for review. Clicking an article's section-level edit control should open the editor at that section.
+
 ## MVP
 
 ### Include
