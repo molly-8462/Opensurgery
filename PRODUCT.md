@@ -20,6 +20,7 @@ The site should help people compare information; it must not present itself as m
 - **Neutral factual records.** A surgeon page is not owned by the surgeon and is distinct from subjective reviews.
 - **Human moderation is essential.** Automation may queue, label, rate-limit, or flag content, but should not silently decide whether a medical experience is truthful.
 - **No generative-AI dependency.** Core writing, moderation, search, and design must work without generated prose or imagery.
+- **Clearly independent identity.** The article structure may use familiar wiki conventions, but branding, colors, typography, controls, and supporting interface elements must remain recognizably OpenSurgery. The site must not imply that it is operated by, affiliated with, or endorsed by Wikipedia or the Wikimedia Foundation.
 
 ## Primary records
 
@@ -109,6 +110,7 @@ Every published revision should record its author, timestamp, edit summary, sour
 - Email notification when a user receives an internal message, with account-level notification controls
 - Reporting, blocking, moderation queue, rollback, and audit log
 - Responsive, accessible light and dark themes
+- Clearly labeled banner and sidebar advertising placements
 
 ### Defer
 
@@ -132,6 +134,9 @@ Every published revision should record its author, timestamp, edit summary, sour
 - Allow surgeons to report factual errors without giving them control over patient reviews.
 - Create an appeals path for both reviewers and surgeons.
 - Publish transparent moderation and conflict-of-interest policies before accepting public submissions.
+- Do not target advertising using a person's transgender status, procedures researched, reviews, messages, photographs, medical history, or other sensitive activity. Prefer contextual sponsorships selected from the public page topic rather than behavioral profiles.
+- Visually separate advertising from community content, label every placement as advertising, and prohibit ads that impersonate navigation, reviews, surgeon records, or editorial recommendations.
+- Establish sponsor eligibility and conflict-of-interest rules. Payment must never affect surgeon-page content, review ordering, moderation outcomes, or removal of criticism.
 
 ## Recommended technical shape
 
@@ -154,11 +159,23 @@ Use one primary relational database for the MVP, not separate databases for Info
 - Flat surfaces, compact spacing, visible borders, conventional underlined links
 - Information tables, revision tabs, small status labels, and a persistent search field
 - A persistent surgeon-page header with clearly selected `Info` and `Reviews` tabs, plus access to revision history and `Talk`
-- Muted neutral palette with one user-tested accent color
+- A low-fatigue blue, pink, and warm-white palette inspired by—but not color-matched to—the transgender pride flag. Use softened tints for large surfaces and reserve stronger colors for links, focus, and selected states so long research sessions remain comfortable.
 - No gradients, glass effects, decorative blobs, fake testimonials, stock surgery imagery, or excessive rounded cards
 - Keyboard navigation, clear focus states, semantic HTML, reduced-motion support, and WCAG AA contrast from the first prototype
 
 The first prototype should test a surgeon page—the densest and most important screen—before building a promotional homepage.
+
+The distinct palette, wordmark, advertising treatment, and component styling are intentional product-identity choices. They reduce the chance that users could mistake OpenSurgery for an official Wikipedia/Wikimedia project and address the trade-dress concern created by borrowing familiar wiki information architecture. Before public launch, include a plain-language non-affiliation statement on the About page and have the final brand presentation reviewed in the operating jurisdiction.
+
+## Advertising and sponsorship
+
+- Reserve one responsive banner placement below the global header and one sidebar placement on wide screens.
+- Keep article text, review rows, talk discussions, and private messaging free of inline advertising in the MVP.
+- Every placement must use a persistent `Advertisement` label, even when sold as a sponsorship.
+- Ads must not resemble site notices, edit controls, review calls to action, or medical recommendations.
+- Prefer fixed-size, low-motion creative. Disallow autoplay audio, flashing content, deceptive countdowns, and disruptive overlays.
+- Do not disclose page-level user activity to advertisers beyond what is strictly necessary to deliver a contextual placement, and document any ad vendor in the privacy policy.
+- Surgeon and clinic advertising requires an especially visible conflict-of-interest label and must not appear on that surgeon's own profile or comparison results until a formal policy is approved.
 
 ## Decisions to resolve before public launch
 

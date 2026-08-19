@@ -1,0 +1,19 @@
+Youll need a databse containing all surgeries and techniques
+remember that some people will want to filter by insurance
+remember that instant results are not needed in review previews
+maybe add an option for people to include their insurance on their reviews and add that info to the surgeons profile
+remember that not all people add shit to reddit, figure out ways to get more people to add reviews here
+allow surgeons to have access to special "surgeon" accounts, let them post some of their own results but make it clear that they controlled the upload
+google ucd head of lgbtq center, email her and ask if you can stop by to talk to trans people
+BUILD A QUESTION LIST TO ASK TRANS people
+Did you struggle finding results while researching
+Did you search surgeon first or technique first
+    have you had surgery?
+        Yes:
+        Did you leave a review? if not, why?
+        No:
+CASES TO READ
+    Two Pesos, Inc. v. Taco Cabana, Inc., 505 U.S. 763 (Trade dress)
+    Wal-Mart Stores, Inc. v. Samara Brothers, Inc., 529 U.S. 205 (Product design vs packaging)
+    TrafFix Devices, Inc. v. Marketing Displays, Inc., 532 U.S. 23 (Case that established that functional parts cannot be barred under trademark law)
+    
