@@ -169,11 +169,22 @@ Use one primary relational database for the MVP, not separate databases for Info
 
 The first prototype should test a surgeon page—the densest and most important screen—before building a promotional homepage.
 
-## Frontend prototype status
+## Application implementation status
 
-The static frontend now implements a complete linked demonstration of the core product. `home.html` is the public landing page and every OpenSurgery wordmark returns there. The menu drawer provides consistent access to discovery, contribution, account, messaging, policy, and support routes. The prototype includes account creation, login and recovery, account settings, public profiles, private-message screens, directory filters, search results, procedure guides, the complete Mara Voss Info/Reviews/Talk/Edit/History workflow, historical snapshots, proposal queue, review composition and detail pages, talk archives, and public policy/support pages.
+The frontend is served by a FastAPI application and reads relational records through the versioned
+`/api/v1` interface. PostgreSQL is the authoritative store for accounts, surgeon identities,
+controlled procedures and techniques, immutable surgeon revisions, edit proposals, reviews, talk
+topics and comments, practices and locations, private conversations, reports, media metadata, and
+audit events. Fictional development examples are loaded by `app.seed`; they are no longer embedded
+in page markup or frontend JavaScript.
 
-Forms and controls provide browser-side validation and honest demonstration states. Account identity is stored only in local browser storage, photo previews remain local, filters operate on the sample records, and download/copy/drawer controls work without a server. No form sends personal or medical information externally. Authentication, persistence, moderation, email delivery, uploads, and secure messaging still require the production backend described below; the frontend must not imply those services are active before they are connected.
+Account creation and login use password hashes and signed HTTP-only session cookies. Public directory, profile,
+review, history, revision, talk, procedure, practice, proposal, and search screens request their data
+from the application. Authenticated endpoints persist settings, reviews, edit proposals, talk topics,
+messages, reports, and safely re-encoded image uploads. Human approval promotes an edit proposal by
+creating a new immutable revision. Email delivery, malware scanning, object-storage deployment,
+production rate limiting, and operational moderation tooling remain deployment work rather than
+features that the user interface should imply are already active.
 
 The distinct palette, wordmark, advertising treatment, and component styling are intentional product-identity choices. They reduce the chance that users could mistake OpenSurgery for an official Wikipedia/Wikimedia project and address the trade-dress concern created by borrowing familiar wiki information architecture. Before public launch, include a plain-language non-affiliation statement in the public policies and have the final brand presentation reviewed in the operating jurisdiction.
 

@@ -30,10 +30,10 @@
         </header>
         <section id="profile">
           <h2>Public profile</h2>
-          <label>Display name<input type="text" value="JuniperNorth" /></label
-          ><label>Approximate region<input type="text" value="Northern California" /></label
+          <label>Display name<input type="text" name="display_name" value="JuniperNorth" disabled /></label
+          ><label>Approximate region<input type="text" name="approximate_region" value="Northern California" /></label
           ><label
-            >Bio<textarea rows="4">
+            >Bio<textarea name="bio" rows="4">
 Researching chest surgeons and contributing sources when I can.</textarea
             >
           </label>
@@ -41,19 +41,19 @@ Researching chest surgeons and contributing sources when I can.</textarea
         <section id="contact">
           <h2>Contact preferences</h2>
           <label class="check-label"
-            ><input type="checkbox" checked /><span
+            ><input type="checkbox" name="allow_messages" checked /><span
               >Allow signed-in members to message me</span
             ></label
           ><label class="check-label"
-            ><input type="checkbox" /><span>Allow messages from new accounts</span></label
+            ><input type="checkbox" name="allow_new_accounts" /><span>Allow messages from new accounts</span></label
           >
         </section>
         <section id="notifications">
           <h2>Email notifications</h2>
           <label class="check-label"
-            ><input type="checkbox" checked /><span>Email me when I receive a message</span></label
+            ><input type="checkbox" name="email_message_notifications" checked /><span>Email me when I receive a message</span></label
           ><label class="check-label"
-            ><input type="checkbox" checked /><span
+            ><input type="checkbox" name="email_watch_notifications" checked /><span
               >Email me about watched-page updates</span
             ></label
           >

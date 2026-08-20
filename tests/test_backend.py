@@ -1,0 +1,119 @@
+import os
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = "sqlite:////tmp/opensurgery-pytest.db"
+
+from sqlalchemy import func, select
+from fastapi import Response
+
+import json
+
+from app.api import (approve_proposal, confirm_password_reset, conversation_messages, create_review,
+                     create_talk_topic, history, login, procedures, profile, proposal,
+                     reply_to_conversation, request_password_reset, send_message, surgeon,
+                     surgeon_reviews, surgeons, update_me)
+from app.database import Base, SessionLocal, engine
+from app.models import EmailOutbox, MediaAsset, Review, ReviewPhoto, ReviewRating, Surgeon, SurgeonRevision, User
+from app.schemas import (LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm,
+                         PasswordResetRequest, ProposalCreate, ReviewCreate, SettingsUpdate, TalkPost)
+from app.seed import seed
+from app.security import create_token, verify_password
+
+
+def setup_module():
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    with SessionLocal() as db:
+        seed(db)
+
+
+def test_seeded_relations_and_public_queries():
+    with SessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Surgeon)) == 4
+        assert db.scalar(select(func.count()).select_from(Review)) == 1
+        assert db.scalar(select(func.count()).select_from(SurgeonRevision)) == 9
+        assert surgeons(db=db)["total"] == 4
+        detail = surgeon("mara-voss", db)
+        assert detail["profile"]["practice"] == "Northbank Reconstructive Center"
+        review_result = surgeon_reviews("mara-voss", db)
+        assert review_result["total"] == 1
+        assert len(review_result["items"][0]["ratings"]) == 3
+        assert review_result["items"][0]["long_term_status"] == "Missing 1-year update"
+        assert len(history("mara-voss", db)["items"]) == 6
+        assert len(procedures(db)["items"]) == 7
+        assert db.scalar(select(func.count()).select_from(ReviewRating)) == 3
+
+
+def test_user_password_and_profile_privacy_boundary():
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.display_name == "RiverNorth"))
+        assert verify_password("prototype-password", user.password_hash)
+        assert create_token(user)
+        response = Response()
+        login(LoginRequest(identity="RiverNorth", password="prototype-password"), response, db)
+        assert "HttpOnly" in response.headers["set-cookie"]
+        public = profile("RiverNorth", db)
+        assert public["display_name"] == "RiverNorth"
+        assert "email" not in public
+        assert "password_hash" not in public
+
+
+def test_password_reset_uses_hashed_single_use_token_and_outbox():
+    with SessionLocal() as db:
+        request_password_reset(PasswordResetRequest(email="river@example.com"), db)
+        queued = db.scalar(select(EmailOutbox).where(EmailOutbox.template == "password_reset"))
+        raw_token = json.loads(queued.payload_json)["token"]
+        confirm_password_reset(PasswordResetConfirm(token=raw_token, password="new-prototype-password"), db)
+        user = db.scalar(select(User).where(User.email == "river@example.com"))
+        assert verify_password("new-prototype-password", user.password_hash)
+
+
+def test_authenticated_browser_write_flows_persist_and_read_back():
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.display_name == "JuniperNorth"))
+        settings_response = update_me(SettingsUpdate(bio="Updated through the browser API.", allow_messages=True), user, db)
+        assert settings_response["bio"] == "Updated through the browser API."
+        media = MediaAsset(owner_id=user.id, storage_key="test/review.webp", safe_storage_key="test/review.webp",
+                           media_type="image/webp", byte_size=100, width=10, height=10,
+                           sha256="0" * 64, processing_state="ready")
+        db.add(media); db.flush()
+        review_response = create_review(ReviewCreate(
+            surgeon_slug="mara-voss", procedure_slug="chest-masculinization",
+            technique_slug="double-incision", title="A persisted integration review",
+            narrative="This narrative is long enough to pass validation and prove persistence.",
+            ratings={"communication": 5}, media_ids=[media.id],
+            designated_long_term_media_id=media.id), user, db)
+        saved_review = db.scalar(select(Review).where(Review.slug == review_response["slug"]))
+        assert saved_review is not None
+        assert db.scalar(select(func.count()).select_from(ReviewRating).where(ReviewRating.review_id == saved_review.id)) == 1
+        assert db.scalar(select(ReviewPhoto).where(ReviewPhoto.review_id == saved_review.id)).designated_long_term
+        topic_response = create_talk_topic("mara-voss", TalkPost(title="Integration topic", body="Persist this discussion."), user, db)
+        assert topic_response["slug"]
+        message_response = send_message(MessageCreate(recipient="RiverNorth", body="Persist this private message."), user, db)
+        conversation_id = message_response["conversation_id"]
+        reply_to_conversation(conversation_id, MessageReply(body="And this reply."), user, db)
+        assert len(conversation_messages(conversation_id, user, db)["items"]) == 2
+
+
+def test_proposal_approval_updates_revision_and_structured_profile():
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.display_name == "JuniperNorth"))
+        proposal_response = proposal("mara-voss", ProposalCreate(
+            proposed_article_body="A complete replacement article body that is long enough.",
+            edit_summary="Integration-tested structured update", source_url="https://example.com/source",
+            source_note="Supports the integration test update.",
+            profile={"city": "Salem", "region": "Oregon", "country": "United States", "specialty": "Reconstructive surgeon"},
+            procedure_slugs=["chest-revision"]), user, db)
+        approval = approve_proposal(proposal_response["id"], user, db)
+        assert approval["revision_number"] > 124
+        detail = surgeon("mara-voss", db)
+        assert detail["city"] == "Salem"
+        assert detail["specialty"] == "Reconstructive surgeon"
+        assert detail["article_body"].startswith("A complete replacement")
+        assert [item["slug"] for item in detail["procedures"]] == ["chest-revision"]
+
+
+def test_static_frontend_and_api_contracts_are_served_together():
+    with SessionLocal() as db:
+        chest = next(item for item in procedures(db)["items"] if item["slug"] == "chest-masculinization")
+        assert {item["slug"] for item in chest["techniques"]} == {"double-incision", "periareolar", "buttonhole"}

@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: opensurgery
+      POSTGRES_USER: opensurgery
+      POSTGRES_PASSWORD: opensurgery
+    ports:
+      - "5432:5432"
+    volumes:
+      - opensurgery_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opensurgery"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  opensurgery_postgres:
+

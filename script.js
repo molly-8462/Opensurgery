@@ -41,7 +41,7 @@ if (editForm) {
     event.preventDefault();
     if (!editForm.reportValidity()) return;
     hasUnsavedChanges = false;
-    if (formStatus) formStatus.textContent = "Proposal ready for review. This prototype has not sent data to a server.";
+    if (formStatus) formStatus.textContent = "Submitting proposal…";
   });
 
   portraitInput?.addEventListener("change", () => {
@@ -63,32 +63,6 @@ if (editForm) {
     event.preventDefault();
     event.returnValue = "";
   });
-}
-
-const revisionNumberElements = document.querySelectorAll("[data-revision-number]");
-
-if (revisionNumberElements.length) {
-  const revisions = {
-    "124": { date: "12 May 2026 at 09:17", editor: "JuniperNorth", summary: "Clarified that buttonhole is listed in current clinic materials and added an archived source." },
-    "123": { date: "9 May 2026 at 01:34", editor: "RiverNorth", summary: "Specified that accessibility information applies to the Portland clinic’s main entrance." },
-    "122": { date: "22 April 2026 at 18:51", editor: "MapleSignal", summary: "Added Spanish to languages reported by the clinic and included a supporting source." },
-    "121": { date: "4 April 2026 at 12:08", editor: "CedarKeys", summary: "Updated the procedure citation to an archived clinic page." },
-    "120": { date: "30 March 2026 at 22:16", editor: "ModHarbor", summary: "Reverted unsourced changes to practice location and website." },
-    "119": { date: "18 March 2026 at 07:42", editor: "AshAndPine", summary: "Reorganized the practice section and corrected a typographical error." },
-  };
-  const requested = new URLSearchParams(window.location.search).get("revision") || "123";
-  const revision = revisions[requested] || revisions["123"];
-  revisionNumberElements.forEach((element) => { element.textContent = requested in revisions ? requested : "123"; });
-  const date = document.querySelector("[data-revision-date]");
-  const editor = document.querySelector("[data-revision-editor]");
-  const summary = document.querySelector("[data-revision-summary]");
-  if (date) date.textContent = revision.date;
-  if (editor) editor.textContent = revision.editor;
-  if (summary) summary.textContent = revision.summary;
-  const editorLink = document.querySelector("[data-revision-editor]");
-  if (editorLink) editorLink.href = `profile.html?user=${encodeURIComponent(revision.editor)}`;
-  const permanentLink = document.querySelector("[data-permanent-link]");
-  if (permanentLink) permanentLink.href = `revision.html?revision=${encodeURIComponent(requested in revisions ? requested : "123")}`;
 }
 
 let menuButton = document.querySelector(".menu-button");
@@ -127,8 +101,16 @@ if (menuButton) {
   window.addEventListener("keydown", (event) => { if (event.key === "Escape") setDrawer(false); });
 }
 
+const API_BASE = "/api/v1";
 let signedInUser = null;
 try { signedInUser = JSON.parse(localStorage.getItem("opensurgery_user")); } catch (_) { signedInUser = null; }
+const apiRequest = async (path, options = {}) => {
+  const headers = { ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...(options.headers || {}) };
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: "same-origin" });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.detail || "The request could not be completed.");
+  return body;
+};
 if (signedInUser?.displayName) {
   document.querySelectorAll(".account-links").forEach((nav) => {
     nav.innerHTML = `<a href="messages.html">Messages</a><a href="account.html">${signedInUser.displayName}</a>`;
@@ -137,7 +119,7 @@ if (signedInUser?.displayName) {
 }
 
 document.querySelectorAll("[data-auth-form]").forEach((form) => {
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!form.reportValidity()) return;
     const status = form.querySelector(".form-status");
@@ -146,14 +128,21 @@ document.querySelectorAll("[data-auth-form]").forEach((form) => {
       if (status) status.textContent = "The passwords do not match.";
       return;
     }
-    const displayName = String(data.get("display_name") || data.get("email") || "JuniperNorth").split("@")[0];
-    localStorage.setItem("opensurgery_user", JSON.stringify({ displayName }));
-    if (status) status.textContent = "Success. Opening your account…";
-    window.setTimeout(() => { window.location.href = "account.html"; }, 350);
+    const endpoint = form.dataset.authForm === "create" ? "/auth/register" : "/auth/login";
+    const payload = form.dataset.authForm === "create"
+      ? { email: data.get("email"), display_name: data.get("display_name"), password: data.get("password"), approximate_region: data.get("region") || null }
+      : { identity: data.get("identity"), password: data.get("password") };
+    try {
+      const result = await apiRequest(endpoint, { method: "POST", body: JSON.stringify(payload) });
+      localStorage.setItem("opensurgery_user", JSON.stringify({ displayName: result.user.display_name }));
+      if (status) status.textContent = "Success. Opening your account…";
+      window.setTimeout(() => { window.location.href = "account.html"; }, 350);
+    } catch (error) { if (status) status.textContent = error.message; }
   });
 });
 
-document.querySelector(".dashboard-signout")?.addEventListener("click", () => {
+document.querySelector(".dashboard-signout")?.addEventListener("click", async () => {
+  await apiRequest("/auth/logout", { method: "POST" }).catch(() => {});
   localStorage.removeItem("opensurgery_user");
   window.location.href = "home.html";
 });
@@ -161,9 +150,10 @@ document.querySelector(".dashboard-signout")?.addEventListener("click", () => {
 document.querySelectorAll("[data-demo-form]").forEach((form) => {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (!form.reportValidity()) return;
     const type = form.dataset.demoForm;
-    const messages = { reset: "Reset instructions would be sent now when the email service is connected.", settings: "Settings saved in this frontend demonstration.", review: "Review submitted for moderation in this frontend demonstration.", contact: "Message prepared successfully. No email was sent from this frontend demonstration." };
+    if (["reset", "settings", "review"].includes(type)) return;
+    if (!form.reportValidity()) return;
+    const messages = { contact: "Message prepared successfully. No email was sent because support delivery is not configured." };
     const status = form.querySelector(".form-status");
     if (status) status.textContent = messages[type] || "Saved.";
   });
@@ -174,7 +164,7 @@ const searchInput = document.querySelector("[data-search-input]");
 const searchQuery = queryParams.get("q");
 if (searchInput && searchQuery) searchInput.value = searchQuery;
 const searchSummary = document.querySelector("[data-search-summary]");
-if (searchSummary && searchQuery) searchSummary.textContent = `Showing prototype matches for “${searchQuery}”.`;
+if (searchSummary && searchQuery) searchSummary.textContent = `Searching for “${searchQuery}”…`;
 
 const profileName = queryParams.get("user");
 if (profileName) {
@@ -183,11 +173,14 @@ if (profileName) {
 }
 const messageDialog = document.querySelector(".message-dialog");
 document.querySelector(".message-user-button")?.addEventListener("click", () => messageDialog?.showModal());
-messageDialog?.addEventListener("close", () => {
+messageDialog?.addEventListener("close", async () => {
   if (messageDialog.returnValue === "send") {
     const status = messageDialog.querySelector(".form-status");
-    if (status) status.textContent = "Message sent in this frontend demonstration.";
     messageDialog.showModal();
+    if (!signedInUser) { if (status) status.textContent = "Log in before sending a message."; return; }
+    const fields = messageDialog.querySelectorAll("input, textarea");
+    try { await apiRequest("/messages", { method: "POST", body: JSON.stringify({ recipient: queryParams.get("user"), body: `${fields[0].value}\n\n${fields[1].value}` }) }); if (status) status.textContent = "Message sent."; }
+    catch (error) { if (status) status.textContent = error.message; }
   }
 });
 
@@ -199,7 +192,7 @@ document.querySelectorAll(".photo-slot.has-photo").forEach((button) => {
 });
 
 document.querySelectorAll(".load-more").forEach((button) => {
-  button.addEventListener("click", () => { button.textContent = "More reviews will load when the API is connected"; button.disabled = true; });
+  button.addEventListener("click", () => { button.textContent = "All published reviews are loaded"; button.disabled = true; });
 });
 document.querySelector(".review-controls button")?.addEventListener("click", (event) => { event.currentTarget.textContent = "Filters applied"; });
 
@@ -213,7 +206,13 @@ document.querySelectorAll(".reply-button, [data-add-topic]").forEach((button) =>
       composer.className = "topic-composer";
       composer.innerHTML = `<label>Topic title<input type="text" required></label><label>Comment<textarea rows="6" required></textarea></label><button class="primary-button">Post topic</button><p class="form-status"></p>`;
       topic.append(composer);
-      composer.addEventListener("submit", (event) => { event.preventDefault(); if (composer.reportValidity()) composer.querySelector(".form-status").textContent = "Topic ready to post when the community API is connected."; });
+      composer.addEventListener("submit", async (event) => {
+        event.preventDefault(); if (!composer.reportValidity()) return;
+        if (!signedInUser) { composer.querySelector(".form-status").textContent = "Log in before posting a topic."; return; }
+        const slug = queryParams.get("surgeon") || "mara-voss";
+        try { await apiRequest(`/surgeons/${slug}/talk`, { method: "POST", body: JSON.stringify({ title: composer.querySelector("input").value, body: composer.querySelector("textarea").value }) }); composer.querySelector(".form-status").textContent = "Topic posted."; }
+        catch (error) { composer.querySelector(".form-status").textContent = error.message; }
+      });
     }
     topic.scrollIntoView({ behavior: "smooth" });
     composer.querySelector("input")?.focus();
@@ -251,17 +250,17 @@ if (directoryForm) {
   applyDirectoryFilters();
 }
 
-const surgeonRecords = {
-  adrian: { name: "Adrian Lee", initials: "AL", country: "Canada", detail: "Craniofacial surgeon · Toronto, Ontario, Canada", procedure: "Facial feminization surgery and facial revision", reviews: "21", overview: "Adrian Lee is a fictional craniofacial surgeon included to demonstrate a directory profile." },
-  samira: { name: "Samira Khan", initials: "SK", country: "United Kingdom", detail: "Plastic surgeon · Manchester, United Kingdom", procedure: "Chest masculinization and breast augmentation", reviews: "17", overview: "Samira Khan is a fictional plastic surgeon included to demonstrate a directory profile." },
-  narin: { name: "Narin Chai", initials: "NC", country: "Thailand", detail: "Gender-affirming surgeon · Bangkok, Thailand", procedure: "Vaginoplasty and revision surgery", reviews: "52", overview: "Narin Chai is a fictional gender-affirming surgeon included to demonstrate a directory profile." }
-};
 const surgeonPage = document.querySelector("[data-surgeon-page]");
 if (surgeonPage) {
-  const record = surgeonRecords[queryParams.get("surgeon")] || surgeonRecords.adrian;
-  const values = { "[data-surgeon-name]": record.name, "[data-surgeon-initials]": record.initials, "[data-surgeon-country]": record.country, "[data-surgeon-detail]": record.detail, "[data-surgeon-procedure]": record.procedure, "[data-surgeon-reviews]": record.reviews, "[data-surgeon-overview]": record.overview };
-  Object.entries(values).forEach(([selector, value]) => { const node = document.querySelector(selector); if (node) node.textContent = value; });
-  document.title = `${record.name} — OpenSurgery`;
+  const slug = queryParams.get("surgeon") || surgeonPage.dataset.surgeonPage || "mara-voss";
+  apiRequest(`/surgeons/${encodeURIComponent(slug)}`).then((record) => {
+    const values = { "[data-surgeon-name]": record.name, "[data-surgeon-initials]": record.initials, "[data-surgeon-country]": record.country, "[data-surgeon-detail]": `${record.specialty} · ${[record.city, record.region, record.country].filter(Boolean).join(", ")}`, "[data-surgeon-procedure]": record.procedures.map((x) => x.name).join(", "), "[data-surgeon-reviews]": record.review_count, "[data-surgeon-overview]": record.article_body };
+    Object.entries(values).forEach(([selector, value]) => { const node = document.querySelector(selector); if (node) node.textContent = value; });
+    document.querySelectorAll("[data-surgeon-link]").forEach((link) => { link.href = `surgeon.html?surgeon=${record.slug}`; });
+    document.querySelectorAll("[data-surgeon-reviews-link]").forEach((link) => { link.href = `reviews.html?surgeon=${record.slug}`; });
+    document.querySelectorAll("[data-surgeon-talk-link]").forEach((link) => { link.href = `talk.html?surgeon=${record.slug}`; });
+    document.title = `${record.name} — OpenSurgery`;
+  }).catch((error) => { surgeonPage.querySelector("[data-surgeon-overview]").textContent = error.message; });
 }
 
 const contactSubject = queryParams.get("subject");
@@ -410,7 +409,7 @@ document.querySelectorAll("button").forEach((button) => {
     button.addEventListener("click", () => {
       const form = button.closest("form");
       const status = form?.querySelector(".form-status");
-      if (status) status.textContent = label === "save draft" ? "Draft saved in this browser demonstration." : "Preview is ready; submitted data remains in the form.";
+      if (status) status.textContent = label === "save draft" ? "Draft saving is not available yet." : "Preview is ready; submitted data remains in the form.";
     });
   }
 });
@@ -424,14 +423,6 @@ document.querySelectorAll(".secondary-button").forEach((button) => {
     label.innerHTML += '<input type="url" placeholder="https://example.org/source" required>';
     button.before(label);
   });
-  if (button.textContent.includes("Export my data")) button.addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify({ prototype: true, account: signedInUser?.displayName || "JuniperNorth" }, null, 2)], { type: "application/json" });
-    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "opensurgery-account-export.json"; link.click(); URL.revokeObjectURL(link.href);
-  });
-  if (button.textContent.includes("Delete account")) button.addEventListener("click", () => {
-    const status = button.closest("form")?.querySelector(".form-status");
-    if (status) status.textContent = "Account deletion requires password confirmation in the production service.";
-  });
 });
 
 document.querySelectorAll(".contact-layout > nav button").forEach((button) => {
@@ -442,3 +433,279 @@ document.querySelectorAll(".contact-layout > nav button").forEach((button) => {
     if (select) select.value = button.textContent.replace("Report a ", "").replace("Surgeon correction", "Surgeon correction").replace("Privacy request", "Privacy request").replace("General question", "General question").replace("safety issue", "Safety issue");
   });
 });
+
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+const pageName = window.location.pathname.split("/").pop() || "home.html";
+
+const renderSurgeonCards = (container, surgeons, directoryRows = false) => {
+  container.innerHTML = surgeons.map((surgeon) => directoryRows ? `
+    <article data-name="${escapeHtml(surgeon.name)}" data-country="${escapeHtml(surgeon.country)}">
+      <div class="directory-avatar">${escapeHtml(surgeon.initials)}</div><div>
+        <h2><a href="surgeon.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h2>
+        <p>${escapeHtml(surgeon.specialty)} · ${escapeHtml([surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", "))}</p>
+        <ul>${surgeon.procedures.map((procedure) => `<li>${escapeHtml(procedure.name)}</li>`).join("")}</ul>
+        <span>${surgeon.review_count} published review${surgeon.review_count === 1 ? "" : "s"}</span>
+      </div><a class="row-action" href="surgeon.html?surgeon=${encodeURIComponent(surgeon.slug)}">View profile →</a>
+    </article>` : `
+    <article class="surgeon-card"><div class="surgeon-card__initials">${escapeHtml(surgeon.initials)}</div><div>
+      <h3><a href="surgeon.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h3>
+      <p>${escapeHtml([surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", "))}</p>
+      <div class="surgeon-card__meta"><span>${escapeHtml(surgeon.procedures[0]?.name || "Profile")}</span><span>${surgeon.review_count} reviews</span></div>
+    </div></article>`).join("");
+};
+
+if (pageName === "home.html") {
+  const cards = document.querySelector(".surgeon-card-grid");
+  if (cards) apiRequest("/surgeons").then((data) => renderSurgeonCards(cards, data.items.slice(0, 3))).catch(() => { cards.innerHTML = "<p>Directory data is temporarily unavailable.</p>"; });
+}
+
+if (pageName === "index.html") {
+  const slug = queryParams.get("surgeon") || "mara-voss";
+  apiRequest(`/surgeons/${encodeURIComponent(slug)}`).then((surgeon) => {
+    document.title = `${surgeon.name} — OpenSurgery`;
+    const title = document.querySelector(".article-header h1"); if (title) title.textContent = surgeon.name;
+    const subtitle = document.querySelector(".article-header .subtitle"); if (subtitle) subtitle.textContent = `Fictional ${surgeon.specialty || "surgeon"}`;
+    document.querySelectorAll(".article-navigation a").forEach((link) => {
+      if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("edit.html")) link.href = `edit.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("history.html")) link.href = `history.html?surgeon=${encodeURIComponent(slug)}`;
+    });
+    const reviewCount = document.querySelector(".article-navigation a[href*='reviews.html'] .count"); if (reviewCount) reviewCount.textContent = surgeon.review_count;
+    const infobox = document.querySelector(".infobox");
+    if (infobox) {
+      infobox.querySelector("header strong").textContent = surgeon.name;
+      infobox.querySelector("header small").textContent = surgeon.specialty || "Specialty not listed";
+      const cells = infobox.querySelectorAll("tbody td");
+      if (cells[0]) cells[0].textContent = surgeon.profile.practice || "Practice not listed";
+      if (cells[1]) cells[1].textContent = [surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", ");
+      if (cells[2]) cells[2].textContent = surgeon.specialty || "Not listed";
+      if (cells[3]) cells[3].textContent = surgeon.procedures.map((item) => item.name).join(", ") || "Not listed";
+      if (cells[4]) cells[4].textContent = (surgeon.profile.languages || []).join(", ") || "Not listed";
+    }
+    const intro = document.querySelector("#intro");
+    if (intro) intro.innerHTML = surgeon.article_body.split("\n\n").map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+  }).catch(() => {});
+}
+
+if (pageName === "directory.html") {
+  const results = document.querySelector(".directory-results");
+  const form = document.querySelector("[data-directory-filters]");
+  const loadDirectory = async () => {
+    const data = new FormData(form); const params = new URLSearchParams();
+    if (data.get("name")) params.set("q", data.get("name"));
+    if (data.get("country")) params.set("country", data.get("country"));
+    if (data.get("procedure")) params.set("procedure", data.get("procedure"));
+    const response = await apiRequest(`/surgeons?${params}`); renderSurgeonCards(results, response.items, true);
+    const summary = document.querySelector(".listing-summary strong"); if (summary) summary.textContent = `${response.total} surgeon profile${response.total === 1 ? "" : "s"}`;
+  };
+  form?.addEventListener("submit", (event) => { event.preventDefault(); loadDirectory().catch(() => {}); });
+  if (results) loadDirectory().catch(() => { results.innerHTML = "<p>Directory data is temporarily unavailable.</p>"; });
+}
+
+if (pageName === "reviews.html") {
+  const slug = queryParams.get("surgeon") || "mara-voss";
+  Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/reviews`)]).then(([surgeon, data]) => {
+    document.querySelectorAll(".title-row h1").forEach((node) => { node.textContent = surgeon.name; });
+    document.querySelectorAll(".review-group").forEach((group, index) => {
+      if (index) { group.hidden = true; return; }
+      const header = group.querySelector(".review-group__header span"); if (header) header.textContent = `${data.total} reviews`;
+      group.querySelectorAll(".review-row").forEach((row) => row.remove());
+      data.items.forEach((review) => group.insertAdjacentHTML("beforeend", `<article class="review-row"><a class="review-row__body" href="review.html?review=${encodeURIComponent(review.slug)}"><div class="review-byline"><span class="user-avatar">${escapeHtml(review.reviewer[0])}</span><div><strong>${escapeHtml(review.reviewer)}</strong><span>${escapeHtml(review.updated_at.slice(0,10))}</span></div></div><dl class="review-meta"><div><dt>Procedure</dt><dd>${escapeHtml(review.procedure)}</dd></div><div><dt>Technique</dt><dd>${escapeHtml(review.technique)}</dd></div></dl><p>${escapeHtml(review.narrative.slice(0,220))}…</p><span class="read-more">Read full review →</span></a></article>`));
+    });
+  });
+}
+
+if (pageName === "review.html") {
+  const slug = queryParams.get("review");
+  if (slug) apiRequest(`/reviews/${encodeURIComponent(slug)}`).then((review) => {
+    document.querySelector(".review-detail-header h1").textContent = review.title;
+    document.querySelector(".review-detail-header p").innerHTML = `First-person experience by <a href="profile.html?user=${encodeURIComponent(review.reviewer)}">${escapeHtml(review.reviewer)}</a>`;
+    document.querySelector(".review-detail-content article").innerHTML = review.narrative.split("\n\n").map((text) => `<p>${escapeHtml(text)}</p>`).join("");
+    document.querySelector(".breadcrumb a:nth-of-type(2)").textContent = review.surgeon.name;
+  });
+}
+
+if (pageName === "history.html") {
+  const slug = queryParams.get("surgeon") || "mara-voss";
+  Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/history`)]).then(([surgeon, data]) => {
+    document.querySelector(".history-page h1").textContent = `${surgeon.name} revision history`;
+    const list = document.querySelector("#history-list"); list.innerHTML = data.items.map((revision) => `<article class="revision"><div class="revision-main"><div class="revision-title"><a href="revision.html?surgeon=${encodeURIComponent(slug)}&revision=${revision.revision_number}">${escapeHtml(new Date(revision.published_at).toLocaleString())}</a></div><p>${escapeHtml(revision.summary)}</p><div class="revision-meta"><a href="profile.html?user=${encodeURIComponent(revision.editor)}">${escapeHtml(revision.editor)}</a><span>${escapeHtml(revision.change_type)}</span></div></div><div class="revision-actions"><a href="revision.html?surgeon=${encodeURIComponent(slug)}&revision=${revision.revision_number}">view version</a></div></article>`).join("");
+  });
+}
+
+if (pageName === "revision.html") {
+  const slug = queryParams.get("surgeon") || "mara-voss"; const number = queryParams.get("revision");
+  if (number) Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/revisions/${number}`)]).then(([surgeon, revision]) => {
+    document.querySelector(".revision-page h1").textContent = surgeon.name;
+    document.querySelectorAll("[data-revision-number]").forEach((node) => { node.textContent = revision.revision_number; });
+    const date = document.querySelector("[data-revision-date]"); if (date) date.textContent = new Date(revision.published_at).toLocaleString();
+    const summary = document.querySelector("[data-revision-summary]"); if (summary) summary.textContent = revision.summary;
+    const body = document.querySelector(".revision-page .article-body");
+    if (body) body.innerHTML = revision.article_body.split("\n\n").map((text) => `<p>${escapeHtml(text)}</p>`).join("");
+  });
+}
+
+if (pageName === "talk.html") {
+  const slug = queryParams.get("surgeon") || "mara-voss";
+  apiRequest(`/surgeons/${slug}/talk`).then((data) => {
+    const firstTopic = document.querySelector(".talk-topic"); if (!firstTopic) return;
+    document.querySelectorAll(".talk-topic:not(#new-topic)").forEach((node) => node.remove());
+    const toolbar = document.querySelector(".discussion-toolbar");
+    data.items.forEach((topic) => toolbar.insertAdjacentHTML("afterend", `<section class="talk-topic" id="${escapeHtml(topic.slug)}"><header class="topic-heading"><h2>${escapeHtml(topic.title)}</h2></header><div class="comment-thread">${topic.comments.map((comment) => `<article class="comment"><div class="comment-marker">${escapeHtml(comment.author[0])}</div><div><p>${escapeHtml(comment.body)}</p><footer><a href="profile.html?user=${encodeURIComponent(comment.author)}">${escapeHtml(comment.author)}</a> <time>${escapeHtml(new Date(comment.created_at).toLocaleString())}</time></footer></div></article>`).join("")}</div></section>`));
+  });
+}
+
+if (pageName === "procedures.html") {
+  apiRequest("/procedures").then((data) => {
+    document.querySelectorAll(".guide-items").forEach((node) => { node.innerHTML = ""; });
+    data.items.forEach((procedure) => {
+      const section = [...document.querySelectorAll(".guide-section")].find((node) => node.id === procedure.category.toLowerCase());
+      section?.querySelector(".guide-items")?.insertAdjacentHTML("beforeend", `<article><h3>${escapeHtml(procedure.name)}</h3><p>${escapeHtml(procedure.description)}</p><div><a href="directory.html?procedure=${encodeURIComponent(procedure.slug)}">Find surgeons</a></div></article>`);
+    });
+  });
+}
+
+if (pageName === "profile.html") {
+  const user = queryParams.get("user");
+  if (user) apiRequest(`/users/${encodeURIComponent(user)}`).then((profile) => {
+    document.querySelectorAll("[data-profile-name]").forEach((node) => { node.textContent = profile.display_name; });
+    document.querySelectorAll("[data-profile-initial]").forEach((node) => { node.textContent = profile.display_name[0]; });
+    const bio = document.querySelector(".profile-about > p"); if (bio) bio.textContent = profile.bio || "This member has not added a bio.";
+  });
+}
+
+if (pageName === "practice.html") {
+  apiRequest("/practices/northbank-reconstructive-center").then((practice) => {
+    document.querySelectorAll(".practice-shell h1").forEach((node) => { node.textContent = practice.name; });
+    const content = document.querySelector("[data-practice-content]");
+    if (content) content.innerHTML = `<h2>Locations</h2>${practice.locations.map((location) => `<p><strong>${escapeHtml([location.city, location.region].filter(Boolean).join(", "))}</strong><br>${escapeHtml(location.accessibility || "Accessibility information not listed.")}</p>`).join("")}<h2>Linked surgeons</h2>${practice.surgeons.map((surgeon) => `<p><a href="surgeon.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></p>`).join("")}`;
+  });
+}
+
+if (pageName === "pending.html") {
+  apiRequest("/proposals").then((data) => {
+    const list = document.querySelector(".proposal-list"); list.innerHTML = data.items.map((proposal) => `<article><span>${escapeHtml(proposal.state)}</span><h2>${escapeHtml(proposal.summary)}</h2><p><a href="surgeon.html?surgeon=${encodeURIComponent(proposal.surgeon.slug)}">${escapeHtml(proposal.surgeon.name)}</a> · Proposed by ${escapeHtml(proposal.author)}</p></article>`).join("");
+  });
+}
+
+if (pageName === "search.html") {
+  const list = document.querySelector(".search-result-list");
+  const query = queryParams.get("q") || "";
+  Promise.all([apiRequest(`/surgeons?q=${encodeURIComponent(query)}`), apiRequest("/procedures")]).then(([surgeons, procedures]) => {
+    const matchingProcedures = procedures.items.filter((item) => !query || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase()));
+    list.innerHTML = surgeons.items.map((item) => `<article><span>Surgeon</span><h2><a href="surgeon.html?surgeon=${encodeURIComponent(item.slug)}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.specialty || "Surgeon profile")}</p></article>`).join("") + matchingProcedures.map((item) => `<article><span>Procedure</span><h2><a href="procedures.html#${encodeURIComponent(item.category.toLowerCase())}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.description)}</p></article>`).join("");
+    const summary = document.querySelector("[data-search-summary]"); if (summary) summary.textContent = `${surgeons.total + matchingProcedures.length} matching results.`;
+  });
+}
+
+if (pageName === "write-review.html") {
+  const form = document.querySelector("[data-demo-form='review']");
+  const selects = form?.querySelectorAll("select");
+  if (form && selects?.length) {
+    let procedureRecords = [];
+    const populateTechniques = () => {
+      const procedure = procedureRecords.find((item) => item.slug === selects[1].value);
+      const options = procedure?.techniques || [];
+      selects[2].innerHTML = '<option value="">Unknown or not listed</option>' + options.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
+    };
+    Promise.all([apiRequest("/surgeons"), apiRequest("/procedures")]).then(([surgeons, procedures]) => {
+      procedureRecords = procedures.items;
+      selects[0].innerHTML = surgeons.items.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
+      selects[1].innerHTML = procedures.items.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
+      populateTechniques();
+    });
+    selects[1].addEventListener("change", populateTechniques);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!signedInUser) { form.querySelector(".form-status").textContent = "Log in before submitting a review."; return; }
+      const data = new FormData(form);
+      const complicationValues = { "None reported": "none_reported", "Complication reported": "complication_reported", "Revision reported": "revision_reported", "Prefer not to say": "prefer_not_to_say" };
+      try {
+        const uploadedMedia = [];
+        for (const name of ["early_photo", "long_term_photo"]) {
+          const file = form.elements[name]?.files?.[0];
+          if (!file) continue;
+          const upload = new FormData(); upload.append("file", file);
+          const media = await apiRequest("/media", { method: "POST", body: upload });
+          uploadedMedia.push({ name, id: media.id });
+        }
+        const month = String(data.get("surgery_month") || "");
+        const longTerm = uploadedMedia.find((item) => item.name === "long_term_photo");
+        const result = await apiRequest("/reviews", { method: "POST", body: JSON.stringify({ surgeon_slug: data.get("surgeon_slug"), procedure_slug: data.get("procedure_slug"), technique_slug: data.get("technique_slug") || null, surgery_date: month ? `${month}-01` : null, surgery_date_precision: "month", location_text: data.get("location") || null, title: data.get("title"), narrative: data.get("narrative"), complications_status: complicationValues[data.get("complications_status")] || "prefer_not_to_say", media_ids: uploadedMedia.map((item) => item.id), designated_long_term_media_id: longTerm && data.get("long_term_confirmed") ? longTerm.id : null }) });
+        form.querySelector(".form-status").textContent = `Review saved with status: ${result.state}.`;
+      } catch (error) { form.querySelector(".form-status").textContent = error.message; }
+    });
+  }
+}
+
+if (pageName === "messages.html") {
+  const list = document.querySelector(".conversation-list"); const thread = document.querySelector(".message-thread");
+  if (!signedInUser) list.innerHTML = '<p><a href="login.html">Log in</a> to view messages.</p>';
+  else apiRequest("/conversations").then((data) => {
+    list.innerHTML = data.items.map((item) => `<button type="button" data-conversation="${item.id}"><span class="user-avatar">${escapeHtml(item.member[0])}</span><span><strong>${escapeHtml(item.member)}</strong><small>${escapeHtml(item.last_message.slice(0,80))}</small></span></button>`).join("") || "<p>No conversations yet.</p>";
+    list.querySelectorAll("button").forEach((button) => button.addEventListener("click", async () => {
+      document.querySelector(".message-composer").dataset.conversation = button.dataset.conversation;
+      const data = await apiRequest(`/conversations/${button.dataset.conversation}/messages`);
+      thread.innerHTML = data.items.map((message) => `<article class="message ${message.mine ? "message--sent" : "message--received"}"><p>${escapeHtml(message.body)}</p><time>${escapeHtml(new Date(message.created_at).toLocaleString())}</time></article>`).join("");
+      document.querySelector(".conversation > header strong").textContent = button.querySelector("strong").textContent;
+    }));
+  }).catch((error) => { list.innerHTML = `<p>${escapeHtml(error.message)}</p>`; });
+  const composer = document.querySelector(".message-composer");
+  composer?.addEventListener("submit", async (event) => {
+    event.preventDefault(); const conversation = composer.dataset.conversation;
+    if (!conversation) { composer.querySelector(".form-status").textContent = "Select a conversation first."; return; }
+    try { await apiRequest(`/conversations/${conversation}/messages`, { method: "POST", body: JSON.stringify({ body: composer.querySelector("textarea").value }) }); composer.querySelector("textarea").value = ""; composer.querySelector(".form-status").textContent = "Reply sent."; }
+    catch (error) { composer.querySelector(".form-status").textContent = error.message; }
+  });
+}
+
+if (pageName === "settings.html") {
+  const form = document.querySelector(".settings-shell form");
+  if (!signedInUser) form.querySelector(".form-status").innerHTML = '<a href="login.html">Log in</a> to manage settings.';
+  else apiRequest("/me").then((user) => {
+    form.elements.display_name.value = user.display_name; form.elements.bio.value = user.bio || ""; form.elements.approximate_region.value = user.approximate_region || "";
+    ["allow_messages","allow_new_accounts","email_message_notifications","email_watch_notifications"].forEach((name) => { form.elements[name].checked = Boolean(user[name]); });
+  });
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try { await apiRequest("/me", { method: "PATCH", body: JSON.stringify({ bio: form.elements.bio.value || null, approximate_region: form.elements.approximate_region.value || null, allow_messages: form.elements.allow_messages.checked, allow_new_accounts: form.elements.allow_new_accounts.checked, email_message_notifications: form.elements.email_message_notifications.checked, email_watch_notifications: form.elements.email_watch_notifications.checked }) }); form.querySelector(".form-status").textContent = "Settings saved."; }
+    catch (error) { form.querySelector(".form-status").textContent = error.message; }
+  });
+  const exportButton = [...form.querySelectorAll("button")].find((button) => button.textContent.includes("Export my data"));
+  exportButton?.addEventListener("click", async () => {
+    try { const data = await apiRequest("/me/export"); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })); link.download = "opensurgery-account-export.json"; link.click(); URL.revokeObjectURL(link.href); }
+    catch (error) { form.querySelector(".form-status").textContent = error.message; }
+  });
+  const deleteButton = [...form.querySelectorAll("button")].find((button) => button.textContent.includes("Delete account"));
+  deleteButton?.addEventListener("click", async () => {
+    if (!window.confirm("Permanently deactivate this account and anonymize its profile?")) return;
+    try { await apiRequest("/me", { method: "DELETE" }); localStorage.removeItem("opensurgery_user"); window.location.href = "home.html"; }
+    catch (error) { form.querySelector(".form-status").textContent = error.message; }
+  });
+}
+
+if (pageName === "forgot-password.html") {
+  const form = document.querySelector("[data-demo-form='reset']");
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try { const result = await apiRequest("/auth/password-reset", { method: "POST", body: JSON.stringify({ email: form.elements.email.value }) }); form.querySelector(".form-status").textContent = result.message; }
+    catch (error) { form.querySelector(".form-status").textContent = error.message; }
+  });
+}
+
+if (pageName === "edit.html") {
+  const slug = queryParams.get("surgeon") || "mara-voss"; const form = document.querySelector("#edit-form");
+  apiRequest(`/surgeons/${slug}`).then((surgeon) => {
+    document.querySelector(".edit-page h1").textContent = `Edit ${surgeon.name}`;
+    form.elements.overview.value = surgeon.article_body;
+    document.querySelector("[data-edit-profile]").textContent = `${surgeon.specialty || "Specialty not listed"} · ${[surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", ")}`;
+  });
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault(); if (!signedInUser) { form.querySelector(".form-status").textContent = "Log in before submitting a proposal."; return; }
+    const selectedProcedures = [...form.elements.sidebar_procedures.selectedOptions].map((option) => option.textContent.toLowerCase().replace(/\bsurgery\b/g, "").trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+    const articleSections = ["overview", "practice_description", "procedure_description", "patient_information"].map((name) => form.elements[name]?.value.trim()).filter(Boolean);
+    try { const result = await apiRequest(`/surgeons/${slug}/proposals`, { method: "POST", body: JSON.stringify({ proposed_article_body: articleSections.join("\n\n"), edit_summary: form.elements.edit_summary.value, source_url: form.elements.source_url.value, source_note: form.elements.source_note.value, procedure_slugs: selectedProcedures, profile: { practice: form.elements.sidebar_practice.value, practice_url: form.elements.sidebar_practice_url.value, city: form.elements.city.value, region: form.elements.region.value, country: form.elements.country.value, specialty: form.elements.specialty.value, languages: form.elements.languages.value.split(",").map((item) => item.trim()).filter(Boolean), website_url: form.elements.website.value } }) }); form.querySelector(".form-status").textContent = `Proposal saved with status: ${result.state}.`; }
+    catch (error) { form.querySelector(".form-status").textContent = error.message; }
+  });
+}

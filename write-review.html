@@ -30,42 +30,43 @@
           <h2>Procedure</h2>
           <div class="field-grid field-grid--two">
             <label
-              >Surgeon<select required>
+              >Surgeon<select name="surgeon_slug" required>
                 <option>Mara Voss</option>
                 <option>Choose another surgeon</option>
               </select></label
             ><label
-              >Procedure<select required>
+              >Procedure<select name="procedure_slug" required>
                 <option>Chest masculinization</option>
                 <option>Chest revision</option>
                 <option>Facial feminization surgery</option>
               </select></label
             ><label
-              >Technique<select required>
+              >Technique<select name="technique_slug" required>
                 <option>Double incision</option>
                 <option>Periareolar</option>
                 <option>Buttonhole</option>
                 <option>Unknown or not listed</option>
               </select></label
-            ><label>Surgery month<input type="month" required /></label
-            ><label>Country<input type="text" value="United States" required /></label
+            ><label>Surgery month<input name="surgery_month" type="month" required /></label
+            ><label>Country<input name="location" type="text" value="United States" required /></label
             ><label
               >Insurance <span class="optional-label">optional</span
-              ><input type="text" placeholder="Plan or self-pay"
+              ><input name="insurance" type="text" placeholder="Plan or self-pay"
             /></label>
           </div>
         </section>
         <section>
           <h2>Your experience</h2>
-          <label>Review title<input type="text" maxlength="100" required /></label
+          <label>Review title<input name="title" type="text" maxlength="100" required /></label
           ><label
             >Tell readers what happened<textarea
               rows="10"
               placeholder="Consultation, scheduling, communication, recovery, complications, revisions, and anything you wish you had known…"
+              name="narrative"
               required
             ></textarea></label
           ><label
-            >Complications or revisions<select>
+            >Complications or revisions<select name="complications_status">
               <option>Prefer not to say</option>
               <option>None reported</option>
               <option>Complication reported</option>
@@ -82,14 +83,15 @@
           <div class="upload-grid">
             <label
               >Early recovery photo<input
+                name="early_photo"
                 type="file"
                 accept="image/jpeg,image/png,image/webp" /></label
             ><label
-              >1-year-or-later photo<input type="file" accept="image/jpeg,image/png,image/webp"
+              >1-year-or-later photo<input name="long_term_photo" type="file" accept="image/jpeg,image/png,image/webp"
             /></label>
           </div>
           <label class="check-label"
-            ><input type="checkbox" /><span
+            ><input type="checkbox" name="long_term_confirmed" /><span
               >The selected long-term photo was taken at least one year after surgery.</span
             ></label
           >
