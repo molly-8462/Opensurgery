@@ -189,7 +189,7 @@ body.drawer-open { overflow: hidden; }
 .home-body { background: #f5f7f9; }
 .home-hero { max-width: 1180px; margin: 34px auto 0; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .7fr); background: var(--paper); box-shadow: 0 8px 28px rgba(31,55,68,.08); }
 .home-hero__content { padding: 52px 55px; border-top: 7px solid #75afc1; }
-.home-kicker, .listing-header > span, .auth-kicker, .home-section > header span, .guide-shell > header span, .profile-header > div > span, .messages-shell > header > span, .review-form-shell > header > span, .contact-shell > header > span, .policy-shell article > header > span { color: var(--pink-hover); font-size: 10px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.home-kicker, .listing-header > span, .auth-kicker, .home-section > header span, .guide-shell > header span, .profile-header > div > span, .messages-shell > header > span, .review-form-shell > header > span, .policy-shell article > header > span { color: var(--pink-hover); font-size: 10px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
 .home-hero h1 { max-width: 780px; margin: 8px 0 14px; color: var(--navy-deep); font-size: clamp(35px, 5vw, 58px); line-height: 1.05; }
 .home-hero__content > p { max-width: 720px; color: var(--muted); font-size: 17px; }
 .home-search, .large-search { display: flex; margin-top: 25px; }
@@ -238,9 +238,9 @@ body.drawer-open { overflow: hidden; }
 .auth-card h1 { margin: 5px 0; font-size: 34px; }
 .auth-card > p { color: var(--muted); }
 .auth-form { display: grid; gap: 15px; margin-top: 25px; }
-.auth-form label, .contact-layout form label, .settings-shell form > section > label, .review-form label { color: var(--navy); font-size: 11px; font-weight: 750; }
-.auth-form input, .contact-layout input, .contact-layout select, .contact-layout textarea, .settings-shell input, .settings-shell textarea, .review-form input, .review-form select, .review-form textarea { width: 100%; margin-top: 5px; padding: 10px; border: 1px solid #9eabb4; font: inherit; }
-.auth-form > .primary-button, .contact-layout .primary-button { min-height: 42px; }
+.auth-form label, .settings-shell form > section > label, .review-form label { color: var(--navy); font-size: 11px; font-weight: 750; }
+.auth-form input, .settings-shell input, .settings-shell textarea, .review-form input, .review-form select, .review-form textarea { width: 100%; margin-top: 5px; padding: 10px; border: 1px solid #9eabb4; font: inherit; }
+.auth-form > .primary-button { min-height: 42px; }
 .auth-row { display: flex; justify-content: space-between; gap: 15px; font-size: 11px; }
 .auth-switch { margin: 23px -40px -36px; padding: 15px 40px; background: var(--blue-wash); font-size: 12px; }
 .auth-aside { padding: 30px; color: #fff; background: var(--navy); border-top: 6px solid #75afc1; }
@@ -248,7 +248,7 @@ body.drawer-open { overflow: hidden; }
 .auth-aside p, .auth-aside li { color: #d4e4e9; font-size: 12px; }
 .auth-aside a { color: #fff; }
 
-.listing-shell, .guide-shell, .dashboard-shell, .profile-shell, .messages-shell, .review-detail-shell, .review-form-shell, .contact-shell { max-width: 1120px; margin: 34px auto 65px; padding: 0 20px; }
+.listing-shell, .guide-shell, .dashboard-shell, .profile-shell, .messages-shell, .review-detail-shell, .review-form-shell { max-width: 1120px; margin: 34px auto 65px; padding: 0 20px; }
 .listing-header { padding: 31px 35px; background: var(--blue-wash); border-left: 7px solid var(--pink); }
 .listing-header h1 { margin: 4px 0; }
 .listing-header p { margin: 0; color: var(--muted); }
@@ -320,8 +320,8 @@ dialog label { font-size: 11px; font-weight: 750; }
 dialog input, dialog textarea { width: 100%; margin-top: 4px; }
 .dialog-close { justify-self: end; background: transparent; border: 0; font-size: 25px; }
 
-.messages-shell > header, .review-form-shell > header, .contact-shell > header { padding: 28px 32px; background: var(--blue-wash); border-left: 7px solid var(--pink); }
-.messages-shell > header h1, .review-form-shell > header h1, .contact-shell > header h1 { margin: 3px 0; }
+.messages-shell > header, .review-form-shell > header { padding: 28px 32px; background: var(--blue-wash); border-left: 7px solid var(--pink); }
+.messages-shell > header h1, .review-form-shell > header h1 { margin: 3px 0; }
 .messages-layout { display: grid; grid-template-columns: 290px 1fr; min-height: 560px; margin-top: 18px; background: #fff; border: 1px solid var(--card-line); }
 .conversation-list { border-right: 1px solid var(--card-line); }
 .conversation-list button { width: 100%; display: grid; grid-template-columns: 35px 1fr auto; gap: 9px; align-items: center; padding: 14px; background: #fff; border: 0; border-bottom: 1px solid var(--card-line); text-align: left; }
@@ -387,13 +387,6 @@ dialog input, dialog textarea { width: 100%; margin-top: 4px; }
 .policy-shell article section { scroll-margin-top: 20px; padding-top: 19px; }
 .policy-shell article h2 { color: var(--navy-deep); }
 .policy-shell article p { line-height: 1.75; }
-.contact-layout { display: grid; grid-template-columns: 230px 1fr; margin-top: 18px; background: #fff; border: 1px solid var(--card-line); }
-.contact-layout > nav { display: grid; align-content: start; border-right: 1px solid var(--card-line); }
-.contact-layout > nav button { padding: 14px; background: #fff; border: 0; border-bottom: 1px solid var(--card-line); text-align: left; }
-.contact-layout > nav button.is-active { background: var(--pink-wash); border-left: 5px solid var(--pink); }
-.contact-layout > nav button:hover:not(.is-active) { background: var(--soft); }
-.contact-layout form { display: grid; gap: 13px; padding: 25px; }
-.contact-layout form > p { color: var(--muted); font-size: 10px; }
 .proposal-list { display: grid; gap: 13px; margin-top: 18px; }
 .proposal-list article { padding: 22px; background: #fff; border: 1px solid var(--card-line); border-left: 5px solid #75afc1; }
 .proposal-list article > span { color: var(--pink-hover); font-size: 9px; font-weight: 800; text-transform: uppercase; }
@@ -450,9 +443,6 @@ body.drawer-open { overflow: hidden; }
   .message { max-width: 90%; }
   .message-composer { grid-template-columns: 1fr; }
   .policy-shell > article { padding: 25px 20px; }
-  .contact-layout { grid-template-columns: 1fr; }
-  .contact-layout > nav { display: flex; overflow-x: auto; border-right: 0; }
-  .contact-layout > nav button { min-width: 150px; }
 }
 
 /* Historical revision snapshot */

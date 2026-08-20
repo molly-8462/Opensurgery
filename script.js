@@ -80,7 +80,7 @@ if (menuButton) {
   drawer.className = "nav-drawer";
   drawer.id = "site-navigation";
   drawer.setAttribute("aria-hidden", "true");
-  drawer.innerHTML = `<div class="nav-drawer__top"><a class="wordmark" href="home.html"><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong><small>Community surgeon guide</small></span></a><button type="button" aria-label="Close navigation">×</button></div><nav aria-label="Main navigation"><strong>Explore</strong><a href="home.html">Home</a><a href="directory.html">Surgeon directory</a><a href="procedures.html">Procedure guides</a><a href="search.html">Search</a><strong>Contribute</strong><a href="write-review.html">Write a review</a><a href="pending.html">Pending edits</a><a href="guidelines.html">Community guidelines</a><strong>Your space</strong><a href="account.html">Account dashboard</a><a href="messages.html">Messages</a><a href="settings.html">Settings</a></nav><footer><a href="policies.html">Policies</a><a href="contact.html">Contact</a></footer>`;
+  drawer.innerHTML = `<div class="nav-drawer__top"><a class="wordmark" href="home.html"><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong><small>Community surgeon guide</small></span></a><button type="button" aria-label="Close navigation">×</button></div><nav aria-label="Main navigation"><strong>Explore</strong><a href="home.html">Home</a><a href="directory.html">Surgeon directory</a><a href="procedures.html">Procedure guides</a><a href="search.html">Search</a><strong>Contribute</strong><a href="write-review.html">Write a review</a><a href="pending.html">Pending edits</a><a href="guidelines.html">Community guidelines</a><strong>Your space</strong><a href="account.html">Account dashboard</a><a href="messages.html">Messages</a><a href="settings.html">Settings</a></nav><footer><a href="policies.html">Policies</a></footer>`;
   const backdrop = document.createElement("button");
   backdrop.className = "nav-backdrop";
   backdrop.type = "button";
@@ -263,10 +263,6 @@ if (surgeonPage) {
   }).catch((error) => { surgeonPage.querySelector("[data-surgeon-overview]").textContent = error.message; });
 }
 
-const contactSubject = queryParams.get("subject");
-const contactSubjectInput = document.querySelector(".contact-shell input[type='text']");
-if (contactSubject && contactSubjectInput) contactSubjectInput.value = contactSubject;
-
 const showInlineMenu = (button, items) => {
   const existing = document.querySelector(".prototype-menu");
   if (existing) {
@@ -404,7 +400,6 @@ document.querySelectorAll("button").forEach((button) => {
       button.textContent = active ? (label === "watch" ? "Watch" : "subscribe") : (label === "watch" ? "Watching" : "subscribed");
     });
   }
-  if (label === "report review") button.addEventListener("click", () => { window.location.href = "contact.html?subject=Report%20review"; });
   if (label === "save draft" || label.includes("preview")) {
     button.addEventListener("click", () => {
       const form = button.closest("form");
@@ -422,15 +417,6 @@ document.querySelectorAll(".secondary-button").forEach((button) => {
     label.textContent = "Additional source URL";
     label.innerHTML += '<input type="url" placeholder="https://example.org/source" required>';
     button.before(label);
-  });
-});
-
-document.querySelectorAll(".contact-layout > nav button").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".contact-layout > nav button").forEach((item) => item.classList.remove("is-active"));
-    button.classList.add("is-active");
-    const select = document.querySelector(".contact-layout select");
-    if (select) select.value = button.textContent.replace("Report a ", "").replace("Surgeon correction", "Surgeon correction").replace("Privacy request", "Privacy request").replace("General question", "General question").replace("safety issue", "Safety issue");
   });
 });
 
