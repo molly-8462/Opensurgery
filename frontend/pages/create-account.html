@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create account — OpenSurgery</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script src="/assets/js/script.js" defer></script>
+  </head>
+  <body class="auth-body">
+    <header class="site-header auth-header">
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span></button
+      ><a class="wordmark" href="home.html"
+        ><span class="wordmark__symbol">O</span
+        ><span><strong>OpenSurgery</strong><small>The community surgeon guide</small></span></a
+      ><span></span>
+      <nav class="account-links"><a href="login.html">Log in</a></nav>
+    </header>
+    <main class="auth-shell auth-shell--wide">
+      <section class="auth-card">
+        <span class="auth-kicker">Join the community</span>
+        <h1>Create an account</h1>
+        <p>
+          Use a pseudonym if you prefer. Your email is used for security and message notifications,
+          never shown publicly.
+        </p>
+        <form class="auth-form" data-auth-form="create">
+          <div class="field-grid field-grid--two">
+            <label
+              >Display name<input
+                type="text"
+                name="display_name"
+                autocomplete="nickname"
+                minlength="3"
+                maxlength="30"
+                required /></label
+            ><label
+              >Email<input
+                type="email"
+                name="email"
+                autocomplete="email"
+                pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                title="Enter a complete email address, such as name@example.com."
+                required
+            /></label>
+          </div>
+          <div class="field-grid field-grid--two">
+            <label
+              >Password<input
+                type="password"
+                name="password"
+                autocomplete="new-password"
+                minlength="8"
+                required /></label
+            ><label
+              >Confirm password<input
+                type="password"
+                name="confirm_password"
+                autocomplete="new-password"
+                minlength="8"
+                required
+            /></label>
+          </div>
+          <label
+            >Approximate region <span class="optional-label">optional</span
+            ><input type="text" name="region" placeholder="Example: Northern California" /></label
+          ><label class="check-label"
+            ><input type="checkbox" name="age" required /><span
+              >I am at least 18 years old.</span
+            ></label
+          ><label class="check-label"
+            ><input type="checkbox" name="terms" required /><span
+              >I agree to the <a href="terms.html">Terms of Use</a> and
+              <a href="guidelines.html">Community Guidelines</a>.</span
+            ></label
+          ><button class="primary-button" type="submit">Create account</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+        </form>
+        <div class="auth-switch">Already have an account? <a href="login.html">Log in</a></div>
+      </section>
+      <aside class="auth-aside">
+        <h2>What an account lets you do</h2>
+        <ul>
+          <li>Publish structured patient reviews</li>
+          <li>Propose and discuss surgeon-page edits</li>
+          <li>Choose whether other members may message you</li>
+          <li>Watch pages and receive update notifications</li>
+          <li>Export or delete your account data</li>
+        </ul>
+      </aside>
+    </main>
+  </body>
+</html>

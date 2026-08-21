@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your account — OpenSurgery</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script src="/assets/js/script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span></button
+      ><a class="wordmark" href="home.html"
+        ><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong></span></a
+      >
+      <form class="search" action="search.html">
+        <input
+          name="q"
+          type="search"
+          placeholder="Search OpenSurgery"
+          aria-label="Search"
+        /><button>Search</button>
+      </form>
+      <nav class="account-links">
+        <a href="messages.html">Messages <span class="count">2</span></a
+        ><a href="profile.html?user=You" data-account-name>Your account</a>
+      </nav>
+    </header>
+    <main class="dashboard-shell">
+      <header class="dashboard-header">
+        <div class="directory-avatar">YU</div>
+        <div>
+          <span>Signed in as</span>
+          <h1 data-account-display>JuniperNorth</h1>
+          <p>Pseudonymous community contributor</p>
+        </div>
+        <a href="profile.html?user=You">View public profile</a>
+      </header>
+      <section class="dashboard-grid">
+        <article>
+          <h2>Contributions</h2>
+          <nav>
+            <a href="reviews.html"><strong>Your reviews</strong><span>2 published</span></a
+            ><a href="pending.html"><strong>Edit proposals</strong><span>1 pending</span></a
+            ><a href="talk.html"><strong>Talk activity</strong><span>3 replies</span></a>
+          </nav>
+        </article>
+        <article>
+          <h2>Communication</h2>
+          <nav>
+            <a href="messages.html"><strong>Messages</strong><span>2 unread</span></a
+            ><a href="settings.html#notifications"
+              ><strong>Email notifications</strong><span>Enabled</span></a
+            ><a href="settings.html#contact"
+              ><strong>Contact preferences</strong><span>Members only</span></a
+            >
+          </nav>
+        </article>
+        <article>
+          <h2>Account</h2>
+          <nav>
+            <a href="settings.html"><strong>Profile settings</strong><span>Edit</span></a
+            ><a href="privacy.html"><strong>Privacy and data</strong><span>Review</span></a
+            ><button class="dashboard-signout" type="button">
+              <strong>Log out</strong><span>End this session</span>
+            </button>
+          </nav>
+        </article>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <nav><a href="privacy.html">Privacy</a></nav>
+    </footer>
+  </body>
+</html>

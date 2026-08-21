@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add a surgeon — OpenSurgery</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script src="/assets/js/script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span></button
+      ><a class="wordmark" href="home.html"><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong></span></a>
+      <span></span><nav class="account-links"><a href="login.html">Log in</a></nav>
+    </header>
+    <main class="review-form-shell">
+      <header>
+        <span>Community submission</span>
+        <h1>Add a surgeon profile</h1>
+        <p>Cannot find a surgeon? Submit a sourced profile for community review. It will not appear publicly until an editor approves it.</p>
+      </header>
+      <form class="review-form" data-surgeon-create>
+        <section>
+          <h2>Identity and location</h2>
+          <div class="field-grid field-grid--two">
+            <label>Full professional name<input name="display_name" type="text" maxlength="240" required /></label>
+            <label>Aliases <span class="optional-label">optional</span><input name="aliases" type="text" maxlength="1000" /></label>
+            <label>Specialty<input name="specialty" type="text" maxlength="240" required /></label>
+            <label>Practice name <span class="optional-label">optional</span><input name="practice_name" type="text" maxlength="240" /></label>
+            <label>City<input name="city" type="text" maxlength="120" required /></label>
+            <label>State or region <span class="optional-label">optional</span><input name="region" type="text" maxlength="120" /></label>
+            <label>Country
+              <select name="country_code" required>
+                <option value="">Choose a country</option><option value="US">United States</option><option value="CA">Canada</option>
+                <option value="GB">United Kingdom</option><option value="TH">Thailand</option>
+              </select>
+            </label>
+            <label>Official website <span class="optional-label">optional</span><input name="website_url" type="url" /></label>
+          </div>
+        </section>
+        <section>
+          <h2>Procedures and profile</h2>
+          <label>Procedures offered<select name="procedure_slugs" multiple size="7" required><option>Loading procedures…</option></select></label>
+          <label>Neutral overview<textarea name="article_body" rows="9" minlength="20" maxlength="100000" required placeholder="Summarize publicly verifiable information without promotional claims."></textarea></label>
+        </section>
+        <section>
+          <h2>Evidence</h2>
+          <label>Source URL<input name="source_url" type="url" required placeholder="https://example.org/public-source" /></label>
+          <label>What does this source support?<textarea name="source_note" rows="4" minlength="5" maxlength="2000" required></textarea></label>
+          <label class="check-label"><input type="checkbox" required /><span>I believe this is a real practicing or formerly practicing surgeon, and this submission contains no private patient information.</span></label>
+          <div class="form-actions"><a class="secondary-button" href="directory.html">Cancel</a><button class="primary-button" type="submit">Submit for review</button></div>
+          <p class="form-status" role="status" aria-live="polite"></p>
+        </section>
+      </form>
+    </main>
+  </body>
+</html>

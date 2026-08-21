@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Log in — OpenSurgery</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script src="/assets/js/script.js" defer></script>
+  </head>
+  <body class="auth-body">
+    <header class="site-header auth-header">
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span></button
+      ><a class="wordmark" href="home.html"
+        ><span class="wordmark__symbol">O</span
+        ><span><strong>OpenSurgery</strong><small>The community surgeon guide</small></span></a
+      ><span></span>
+      <nav class="account-links"><a href="create-account.html">Create account</a></nav>
+    </header>
+    <main class="auth-shell">
+      <section class="auth-card">
+        <span class="auth-kicker">Welcome back</span>
+        <h1>Log in</h1>
+        <p>Continue your research, manage reviews, and respond to community messages.</p>
+        <form class="auth-form" data-auth-form="login">
+          <label
+            >Email or username<input
+              type="text"
+              name="identity"
+              autocomplete="username"
+              required /></label
+          ><label
+            >Password<input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              minlength="8"
+              required
+          /></label>
+          <div class="auth-row">
+            <label class="check-label"
+              ><input type="checkbox" name="remember" /><span>Keep me logged in</span></label
+            ><a href="forgot-password.html">Forgot password?</a>
+          </div>
+          <button class="primary-button" type="submit">Log in</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+        </form>
+        <div class="auth-switch">
+          New to OpenSurgery? <a href="create-account.html">Create an account</a>
+        </div>
+      </section>
+      <aside class="auth-aside">
+        <h2>Your privacy matters</h2>
+        <p>
+          Profiles can be pseudonymous. Contact preferences and procedure history are optional, and
+          private messages are never public.
+        </p>
+        <a href="privacy.html">Read our privacy approach →</a>
+      </aside>
+    </main>
+  </body>
+</html>

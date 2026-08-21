@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Messages — OpenSurgery</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script src="/assets/js/script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span></button
+      ><a class="wordmark" href="home.html"
+        ><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong></span></a
+      ><span></span>
+      <nav class="account-links"><a href="account.html">Your account</a></nav>
+    </header>
+    <main class="messages-shell">
+      <header>
+        <span>Private communication</span>
+        <h1>Messages</h1>
+        <p>Email notifications contain a link back here, not the private message contents.</p>
+      </header>
+      <div class="messages-layout">
+        <nav class="conversation-list" aria-label="Conversations">
+          <button class="is-active" type="button">
+            <span class="user-avatar">R</span
+            ><span><strong>RiverNorth</strong><small>Travel planning question · 2h</small></span
+            ><b>1</b></button
+          ><button type="button">
+            <span class="user-avatar">A</span
+            ><span><strong>AshAndPine</strong><small>Thank you! · Yesterday</small></span>
+          </button>
+        </nav>
+        <section class="conversation">
+          <header>
+            <div><strong>RiverNorth</strong><span>Community member</span></div>
+            <a href="profile.html?user=RiverNorth">View profile</a>
+          </header>
+          <div class="message-thread">
+            <article class="message message--received">
+              <p>
+                Hi! I saw that you’re researching travel for surgery. Happy to answer questions
+                about finding a nearby place to stay.
+              </p>
+              <time>Today, 10:42</time>
+            </article>
+            <article class="message message--sent">
+              <p>Thank you. How many days did you stay before traveling home?</p>
+              <time>Today, 11:05</time>
+            </article>
+          </div>
+          <form class="message-composer" data-demo-form="message">
+            <label class="sr-only" for="message-text">Write a reply</label
+            ><textarea id="message-text" rows="3" placeholder="Write a reply…" required></textarea
+            ><button class="primary-button">Send</button>
+            <p class="form-status" role="status"></p>
+          </form>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

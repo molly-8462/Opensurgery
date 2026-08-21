@@ -22,6 +22,7 @@ from app.schemas import (LoginRequest, MessageCreate, MessageReply, PasswordRese
                          SurgeonCreate, SurgeonRemoval, TalkPost)
 from app.seed import seed
 from app.security import create_token, verify_password
+from app.main import ASSETS_ROOT, PAGES_ROOT, PUBLIC_PAGES
 
 
 def setup_module():
@@ -118,6 +119,11 @@ def test_proposal_approval_updates_revision_and_structured_profile():
 
 
 def test_static_frontend_and_api_contracts_are_served_together():
+    assert "home.html" in PUBLIC_PAGES
+    assert (PAGES_ROOT / "directory.html").is_file()
+    assert (ASSETS_ROOT / "css" / "styles.css").is_file()
+    assert (ASSETS_ROOT / "js" / "script.js").is_file()
+    assert (ASSETS_ROOT / "data" / "history-export.json").is_file()
     with SessionLocal() as db:
         chest = next(item for item in procedures(db)["items"] if item["slug"] == "chest-masculinization")
         assert {item["slug"] for item in chest["techniques"]} == {"double-incision", "periareolar", "buttonhole"}

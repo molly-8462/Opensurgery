@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account settings — OpenSurgery</title>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <script src="/assets/js/script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <span></span
+      ><a class="wordmark" href="home.html"
+        ><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong></span></a
+      ><span></span>
+      <nav class="account-links"><a href="account.html">Your account</a></nav>
+    </header>
+    <main class="settings-shell">
+      <aside>
+        <h2>Settings</h2>
+        <nav>
+          <a href="#profile">Profile</a><a href="#contact">Contact</a
+          ><a href="#notifications">Notifications</a><a href="#privacy">Privacy and data</a>
+        </nav>
+      </aside>
+      <form data-demo-form="settings">
+        <header>
+          <h1>Account settings</h1>
+          <p>Control what is public and how OpenSurgery contacts you.</p>
+        </header>
+        <section id="profile">
+          <h2>Public profile</h2>
+          <label>Display name<input type="text" name="display_name" value="JuniperNorth" disabled /></label
+          ><label>Approximate region<input type="text" name="approximate_region" value="Northern California" /></label
+          ><label
+            >Bio<textarea name="bio" rows="4">
+Researching chest surgeons and contributing sources when I can.</textarea
+            >
+          </label>
+        </section>
+        <section id="contact">
+          <h2>Contact preferences</h2>
+          <label class="check-label"
+            ><input type="checkbox" name="allow_messages" checked /><span
+              >Allow signed-in members to message me</span
+            ></label
+          ><label class="check-label"
+            ><input type="checkbox" name="allow_new_accounts" /><span>Allow messages from new accounts</span></label
+          >
+        </section>
+        <section id="notifications">
+          <h2>Email notifications</h2>
+          <label class="check-label"
+            ><input type="checkbox" name="email_message_notifications" checked /><span>Email me when I receive a message</span></label
+          ><label class="check-label"
+            ><input type="checkbox" name="email_watch_notifications" checked /><span
+              >Email me about watched-page updates</span
+            ></label
+          >
+        </section>
+        <section id="privacy">
+          <h2>Privacy and data</h2>
+          <a href="privacy.html">Read the privacy policy</a>
+          <div>
+            <button type="button" class="secondary-button">Export my data</button
+            ><button type="button" class="secondary-button">Delete account</button>
+          </div>
+        </section>
+        <button class="primary-button">Save settings</button>
+        <p class="form-status"></p>
+      </form>
+    </main>
+  </body>
+</html>
