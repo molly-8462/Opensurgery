@@ -57,6 +57,26 @@ class ProposalCreate(BaseModel):
     procedure_slugs: list[str] = Field(default_factory=list)
 
 
+class SurgeonCreate(BaseModel):
+    display_name: str = Field(min_length=3, max_length=240)
+    aliases: str | None = Field(default=None, max_length=1000)
+    specialty: str = Field(min_length=3, max_length=240)
+    city: str = Field(min_length=2, max_length=120)
+    region: str | None = Field(default=None, max_length=120)
+    country_code: str = Field(min_length=2, max_length=2, pattern=r"^[A-Za-z]{2}$")
+    website_url: HttpUrl | None = None
+    practice_name: str | None = Field(default=None, max_length=240)
+    article_body: str = Field(min_length=20, max_length=100000)
+    procedure_slugs: list[str] = Field(min_length=1, max_length=20)
+    source_url: HttpUrl
+    source_note: str = Field(min_length=5, max_length=2000)
+
+
+class SurgeonRemoval(BaseModel):
+    reason: str = Field(min_length=10, max_length=2000)
+    status: str = Field(default="removed", pattern=r"^(removed|retired)$")
+
+
 class MessageCreate(BaseModel):
     recipient: str = Field(min_length=3, max_length=30)
     body: str = Field(min_length=1, max_length=10000)

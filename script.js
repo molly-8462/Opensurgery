@@ -80,7 +80,7 @@ if (menuButton) {
   drawer.className = "nav-drawer";
   drawer.id = "site-navigation";
   drawer.setAttribute("aria-hidden", "true");
-  drawer.innerHTML = `<div class="nav-drawer__top"><a class="wordmark" href="home.html"><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong><small>Community surgeon guide</small></span></a><button type="button" aria-label="Close navigation">×</button></div><nav aria-label="Main navigation"><strong>Explore</strong><a href="home.html">Home</a><a href="directory.html">Surgeon directory</a><a href="procedures.html">Procedure guides</a><a href="search.html">Search</a><strong>Contribute</strong><a href="write-review.html">Write a review</a><a href="pending.html">Pending edits</a><a href="guidelines.html">Community guidelines</a><strong>Your space</strong><a href="account.html">Account dashboard</a><a href="messages.html">Messages</a><a href="settings.html">Settings</a></nav><footer><a href="policies.html">Policies</a></footer>`;
+  drawer.innerHTML = `<div class="nav-drawer__top"><a class="wordmark" href="home.html"><span class="wordmark__symbol">O</span><span><strong>OpenSurgery</strong><small>Community surgeon guide</small></span></a><button type="button" aria-label="Close navigation">×</button></div><nav aria-label="Main navigation"><strong>Explore</strong><a href="home.html">Home</a><a href="directory.html">Surgeon directory</a><a href="procedures.html">Procedure guides</a><a href="search.html">Search</a><strong>Contribute</strong><a href="add-surgeon.html">Add a surgeon</a><a href="write-review.html">Write a review</a><a href="pending.html">Pending edits</a><a href="guidelines.html">Community guidelines</a><strong>Your space</strong><a href="account.html">Account dashboard</a><a href="messages.html">Messages</a><a href="settings.html">Settings</a></nav><footer><a href="policies.html">Policies</a></footer>`;
   const backdrop = document.createElement("button");
   backdrop.className = "nav-backdrop";
   backdrop.type = "button";
@@ -572,6 +572,19 @@ if (pageName === "practice.html") {
 if (pageName === "pending.html") {
   apiRequest("/proposals").then((data) => {
     const list = document.querySelector(".proposal-list"); list.innerHTML = data.items.map((proposal) => `<article><span>${escapeHtml(proposal.state)}</span><h2>${escapeHtml(proposal.summary)}</h2><p><a href="surgeon.html?surgeon=${encodeURIComponent(proposal.surgeon.slug)}">${escapeHtml(proposal.surgeon.name)}</a> · Proposed by ${escapeHtml(proposal.author)}</p></article>`).join("");
+    apiRequest("/me").then((user) => {
+      if (!["trusted_editor", "moderator", "admin"].includes(user.role)) return;
+      apiRequest("/moderation/surgeons").then((submissions) => {
+        submissions.items.forEach((item) => list.insertAdjacentHTML("beforeend", `<article data-surgeon-submission="${item.id}"><span>New profile</span><h2>${escapeHtml(item.name)}</h2><p>${escapeHtml(item.specialty)} · ${escapeHtml([item.city, item.region, item.country_code].filter(Boolean).join(", "))} · Submitted by ${escapeHtml(item.submitter)}</p><blockquote>${escapeHtml(item.article_body)}</blockquote>${item.sources.map((source) => `<p><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">Review source</a> — ${escapeHtml(source.note)}</p>`).join("")}<div><button class="primary-button" type="button" data-approve-surgeon>Approve profile</button></div></article>`));
+        list.querySelectorAll("[data-approve-surgeon]").forEach((button) => button.addEventListener("click", async () => {
+          const article = button.closest("[data-surgeon-submission]");
+          try {
+            const result = await apiRequest(`/moderation/surgeons/${article.dataset.surgeonSubmission}/approve`, { method: "POST" });
+            article.innerHTML = `<span>Published</span><h2>Profile approved</h2><p><a href="surgeon.html?surgeon=${encodeURIComponent(result.slug)}">Open the published profile</a></p>`;
+          } catch (error) { button.insertAdjacentHTML("afterend", `<p class="form-status">${escapeHtml(error.message)}</p>`); }
+        }));
+      });
+    }).catch(() => {});
   });
 }
 
@@ -623,6 +636,52 @@ if (pageName === "write-review.html") {
       } catch (error) { form.querySelector(".form-status").textContent = error.message; }
     });
   }
+}
+
+if (pageName === "add-surgeon.html") {
+  const form = document.querySelector("[data-surgeon-create]");
+  const procedureSelect = form?.elements.procedure_slugs;
+  if (procedureSelect) apiRequest("/procedures").then((data) => {
+    procedureSelect.innerHTML = data.items.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
+  }).catch((error) => { form.querySelector(".form-status").textContent = error.message; });
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    if (!signedInUser) { form.querySelector(".form-status").innerHTML = '<a href="login.html">Log in</a> before submitting a surgeon.'; return; }
+    const data = new FormData(form);
+    const payload = {
+      display_name: data.get("display_name"), aliases: data.get("aliases") || null,
+      specialty: data.get("specialty"), city: data.get("city"), region: data.get("region") || null,
+      country_code: data.get("country_code"), website_url: data.get("website_url") || null,
+      practice_name: data.get("practice_name") || null, article_body: data.get("article_body"),
+      procedure_slugs: data.getAll("procedure_slugs"), source_url: data.get("source_url"),
+      source_note: data.get("source_note"),
+    };
+    try {
+      const result = await apiRequest("/surgeons", { method: "POST", body: JSON.stringify(payload) });
+      form.reset();
+      form.querySelector(".form-status").textContent = `Profile submitted for review with status: ${result.status}.`;
+    } catch (error) { form.querySelector(".form-status").textContent = error.message; }
+  });
+}
+
+if (["index.html", "surgeon.html"].includes(pageName)) {
+  apiRequest("/me").then((user) => {
+    if (!["trusted_editor", "moderator", "admin"].includes(user.role)) return;
+    const slug = queryParams.get("surgeon") || "mara-voss";
+    const container = document.querySelector(".article-navigation nav:last-child, .dynamic-surgeon__content aside");
+    if (!container || container.querySelector("[data-remove-surgeon]")) return;
+    const button = document.createElement("button"); button.type = "button"; button.dataset.removeSurgeon = ""; button.textContent = "Remove profile";
+    container.append(button);
+    button.addEventListener("click", async () => {
+      const reason = window.prompt("Why should this profile be removed? This will be recorded in the audit log.");
+      if (!reason || reason.trim().length < 10) return;
+      try {
+        await apiRequest(`/moderation/surgeons/${encodeURIComponent(slug)}/remove`, { method: "POST", body: JSON.stringify({ reason: reason.trim(), status: "removed" }) });
+        window.location.href = "directory.html";
+      } catch (error) { window.alert(error.message); }
+    });
+  }).catch(() => {});
 }
 
 if (pageName === "messages.html") {

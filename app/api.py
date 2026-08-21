@@ -19,12 +19,18 @@ from .models import (AccountToken, AuditEvent, Conversation, ConversationMember,
                      RevisionKind, RevisionSource, Source, Surgeon,
                      SurgeonPractice, SurgeonRevision, TalkComment, TalkTopic, Technique, User, UserRole, surgeon_procedures)
 from .schemas import (LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm, PasswordResetRequest,
-                      ProposalCreate, RegisterRequest, ReportCreate, ReviewCreate, SettingsUpdate, TalkPost)
+                      ProposalCreate, RegisterRequest, ReportCreate, ReviewCreate, SettingsUpdate,
+                      SurgeonCreate, SurgeonRemoval, TalkPost)
 from .security import create_token, current_user, hash_password, verify_password
 from .serializers import review_data, surgeon_detail, surgeon_summary
 
 
 router = APIRouter(prefix="/api/v1")
+
+
+def require_editor(user: User) -> None:
+    if user.role not in {UserRole.trusted_editor, UserRole.moderator, UserRole.admin}:
+        raise HTTPException(403, "Editor role required")
 
 
 @router.get("/health")
@@ -82,7 +88,8 @@ def confirm_password_reset(payload: PasswordResetConfirm, db: Session = Depends(
 
 @router.get("/me")
 def me(user: User = Depends(current_user)):
-    return {"id": user.id, "display_name": user.display_name, "email": user.email, "bio": user.bio, "approximate_region": user.approximate_region,
+    return {"id": user.id, "display_name": user.display_name, "email": user.email, "role": user.role,
+            "bio": user.bio, "approximate_region": user.approximate_region,
             "allow_messages": user.allow_messages, "allow_new_accounts": user.allow_new_accounts,
             "email_message_notifications": user.email_message_notifications,
             "email_watch_notifications": user.email_watch_notifications}
@@ -121,6 +128,95 @@ def surgeons(q: str | None = None, country: str | None = None, procedure: str | 
     return {"items": result, "total": len(result)}
 
 
+@router.post("/surgeons", status_code=201)
+def create_surgeon(payload: SurgeonCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    slug_base = re.sub(r"[^a-z0-9]+", "-", payload.display_name.lower()).strip("-")[:105] or "surgeon"
+    slug = slug_base
+    suffix = 1
+    while db.scalar(select(Surgeon.id).where(Surgeon.slug == slug)):
+        suffix += 1
+        slug = f"{slug_base}-{suffix}"
+    procedures = db.scalars(select(Procedure).where(Procedure.slug.in_(set(payload.procedure_slugs)))).all()
+    if len(procedures) != len(set(payload.procedure_slugs)):
+        raise HTTPException(400, "One or more procedures are unknown")
+    source = Source(url=str(payload.source_url), supports=payload.source_note, submitted_by_id=user.id)
+    db.add(source); db.flush()
+    record = Surgeon(slug=slug, display_name=payload.display_name.strip(), aliases=payload.aliases,
+                     specialty=payload.specialty.strip(), city=payload.city.strip(),
+                     region=payload.region.strip() if payload.region else None,
+                     country_code=payload.country_code.upper(),
+                     website_url=str(payload.website_url) if payload.website_url else None,
+                     is_published=False, lifecycle_status="pending", submitted_by_id=user.id)
+    db.add(record); db.flush()
+    snapshot = {"practice": payload.practice_name, "procedure_slugs": payload.procedure_slugs}
+    revision = SurgeonRevision(surgeon_id=record.id, revision_number=1, author_id=user.id,
+                               article_body=payload.article_body, snapshot_json=json.dumps(snapshot),
+                               edit_summary="Initial profile submission", change_type="New profile")
+    db.add(revision); db.flush(); record.current_revision_id = revision.id
+    db.execute(surgeon_procedures.insert(), [{"surgeon_id": record.id, "procedure_id": item.id} for item in procedures])
+    db.add(RevisionSource(revision_id=revision.id, source_id=source.id))
+    db.add(AuditEvent(actor_id=user.id, action="surgeon.submitted", target_type="surgeon", target_id=record.id,
+                      public_detail=f"Submitted {record.display_name} for review"))
+    db.commit()
+    return {"id": record.id, "slug": record.slug, "status": record.lifecycle_status}
+
+
+@router.get("/moderation/surgeons")
+def pending_surgeons(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    rows = db.scalars(select(Surgeon).where(Surgeon.lifecycle_status == "pending").order_by(Surgeon.created_at)).all()
+    items = []
+    for row in rows:
+        revision = db.get(SurgeonRevision, row.current_revision_id) if row.current_revision_id else None
+        source_rows = db.execute(select(Source.url, Source.supports).join(
+            RevisionSource, RevisionSource.source_id == Source.id
+        ).where(RevisionSource.revision_id == row.current_revision_id)).all() if revision else []
+        items.append({"id": row.id, "slug": row.slug, "name": row.display_name,
+                      "specialty": row.specialty, "city": row.city, "region": row.region,
+                      "country_code": row.country_code, "submitted_at": row.created_at,
+                      "article_body": revision.article_body if revision else "",
+                      "sources": [{"url": source.url, "note": source.supports} for source in source_rows],
+                      "submitter": db.get(User, row.submitted_by_id).display_name if row.submitted_by_id and db.get(User, row.submitted_by_id) else "Deleted member"})
+    return {"items": items}
+
+
+@router.post("/moderation/surgeons/{surgeon_id}/approve")
+def approve_surgeon(surgeon_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    record = db.get(Surgeon, surgeon_id)
+    if not record or record.lifecycle_status != "pending":
+        raise HTTPException(404, "Pending surgeon submission not found")
+    record.lifecycle_status = "published"; record.is_published = True
+    db.add(AuditEvent(actor_id=user.id, action="surgeon.approved", target_type="surgeon", target_id=record.id,
+                      public_detail=f"Published {record.display_name}"))
+    db.commit(); return {"slug": record.slug, "status": record.lifecycle_status}
+
+
+@router.post("/moderation/surgeons/{slug}/remove")
+def remove_surgeon(slug: str, payload: SurgeonRemoval, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    record = db.scalar(select(Surgeon).where(Surgeon.slug == slug))
+    if not record: raise HTTPException(404, "Surgeon not found")
+    record.lifecycle_status = payload.status; record.is_published = False
+    record.removed_at = datetime.now(timezone.utc); record.removed_by_id = user.id; record.removal_reason = payload.reason
+    db.add(AuditEvent(actor_id=user.id, action=f"surgeon.{payload.status}", target_type="surgeon", target_id=record.id,
+                      public_detail=payload.reason))
+    db.commit(); return {"slug": record.slug, "status": record.lifecycle_status}
+
+
+@router.post("/moderation/surgeons/{slug}/restore")
+def restore_surgeon(slug: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    record = db.scalar(select(Surgeon).where(Surgeon.slug == slug))
+    if not record or record.lifecycle_status not in {"removed", "retired"}:
+        raise HTTPException(404, "Removed surgeon not found")
+    record.lifecycle_status = "published"; record.is_published = True
+    record.removed_at = None; record.removed_by_id = None; record.removal_reason = None
+    db.add(AuditEvent(actor_id=user.id, action="surgeon.restored", target_type="surgeon", target_id=record.id,
+                      public_detail=f"Restored {record.display_name}"))
+    db.commit(); return {"slug": record.slug, "status": record.lifecycle_status}
+
+
 @router.get("/surgeons/{slug}")
 def surgeon(slug: str, db: Session = Depends(get_db)):
     record = db.scalar(select(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True)))
@@ -130,7 +226,7 @@ def surgeon(slug: str, db: Session = Depends(get_db)):
 
 @router.get("/surgeons/{slug}/reviews")
 def surgeon_reviews(slug: str, db: Session = Depends(get_db)):
-    record = db.scalar(select(Surgeon).where(Surgeon.slug == slug))
+    record = db.scalar(select(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True)))
     if not record: raise HTTPException(404, "Surgeon not found")
     reviews = db.scalars(select(Review).where(Review.surgeon_id == record.id, Review.state == ModerationState.published).order_by(Review.published_at.desc())).all()
     return {"items": [review_data(db, review) for review in reviews], "total": len(reviews)}
@@ -138,14 +234,15 @@ def surgeon_reviews(slug: str, db: Session = Depends(get_db)):
 
 @router.get("/reviews/{slug}")
 def review(slug: str, db: Session = Depends(get_db)):
-    record = db.scalar(select(Review).where(Review.slug == slug, Review.state == ModerationState.published))
+    record = db.scalar(select(Review).join(Surgeon).where(Review.slug == slug,
+                       Review.state == ModerationState.published, Surgeon.is_published.is_(True)))
     if not record: raise HTTPException(404, "Review not found")
     return review_data(db, record)
 
 
 @router.post("/reviews", status_code=201)
 def create_review(payload: ReviewCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == payload.surgeon_slug)); procedure = db.scalar(select(Procedure).where(Procedure.slug == payload.procedure_slug))
+    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == payload.surgeon_slug, Surgeon.is_published.is_(True))); procedure = db.scalar(select(Procedure).where(Procedure.slug == payload.procedure_slug))
     technique = db.scalar(select(Technique).where(Technique.slug == payload.technique_slug)) if payload.technique_slug else None
     if not surgeon or not procedure: raise HTTPException(400, "Unknown surgeon or procedure")
     if payload.technique_slug and (not technique or technique.procedure_id != procedure.id):
@@ -172,7 +269,7 @@ def create_review(payload: ReviewCreate, user: User = Depends(current_user), db:
 
 @router.get("/surgeons/{slug}/history")
 def history(slug: str, db: Session = Depends(get_db)):
-    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug));
+    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True)));
     if not surgeon: raise HTTPException(404, "Surgeon not found")
     rows = db.scalars(select(SurgeonRevision).where(SurgeonRevision.surgeon_id == surgeon.id).order_by(SurgeonRevision.revision_number.desc())).all()
     return {"items": [{"revision_number": r.revision_number, "published_at": r.published_at, "editor": db.get(User,r.author_id).display_name if r.author_id and db.get(User,r.author_id) else "Deleted member", "summary": r.edit_summary, "change_type": r.change_type, "kind": r.kind} for r in rows]}
@@ -180,14 +277,14 @@ def history(slug: str, db: Session = Depends(get_db)):
 
 @router.get("/surgeons/{slug}/revisions/{number}")
 def revision(slug: str, number: int, db: Session = Depends(get_db)):
-    row = db.scalar(select(SurgeonRevision).join(Surgeon).where(Surgeon.slug == slug, SurgeonRevision.revision_number == number))
+    row = db.scalar(select(SurgeonRevision).join(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True), SurgeonRevision.revision_number == number))
     if not row: raise HTTPException(404, "Revision not found")
     return {"revision_number": row.revision_number, "article_body": row.article_body, "profile": json.loads(row.snapshot_json), "summary": row.edit_summary, "change_type": row.change_type, "kind": row.kind, "published_at": row.published_at}
 
 
 @router.post("/surgeons/{slug}/proposals", status_code=201)
 def proposal(slug: str, payload: ProposalCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug));
+    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True)));
     if not surgeon: raise HTTPException(404, "Surgeon not found")
     source = Source(url=str(payload.source_url), supports=payload.source_note, submitted_by_id=user.id); db.add(source); db.flush()
     profile = payload.profile.copy()
@@ -198,7 +295,7 @@ def proposal(slug: str, payload: ProposalCreate, user: User = Depends(current_us
 
 @router.get("/surgeons/{slug}/talk")
 def talk(slug: str, db: Session = Depends(get_db)):
-    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug));
+    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True)));
     if not surgeon: raise HTTPException(404, "Surgeon not found")
     topics = db.scalars(select(TalkTopic).where(TalkTopic.surgeon_id == surgeon.id, TalkTopic.state == ModerationState.published).order_by(TalkTopic.created_at)).all()
     return {"items": [{"slug": t.slug, "title": t.title, "comments": [{"id": c.id, "author": db.get(User,c.author_id).display_name if c.author_id and db.get(User,c.author_id) else "Deleted member", "body": c.body, "created_at": c.created_at, "parent_comment_id": c.parent_comment_id} for c in db.scalars(select(TalkComment).where(TalkComment.topic_id == t.id, TalkComment.state == ModerationState.published).order_by(TalkComment.created_at)).all()]} for t in topics]}
@@ -206,7 +303,7 @@ def talk(slug: str, db: Session = Depends(get_db)):
 
 @router.post("/surgeons/{slug}/talk", status_code=201)
 def create_talk_topic(slug: str, payload: TalkPost, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug))
+    surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True)))
     if not surgeon: raise HTTPException(404, "Surgeon not found")
     topic_slug = re.sub(r"[^a-z0-9]+", "-", payload.title.lower()).strip("-")[:110] + "-" + uuid.uuid4().hex[:6]
     topic = TalkTopic(surgeon_id=surgeon.id, slug=topic_slug, title=payload.title, author_id=user.id)
@@ -314,7 +411,7 @@ async def upload_media(file: UploadFile = File(...), user: User = Depends(curren
 
 @router.post("/moderation/proposals/{proposal_id}/approve")
 def approve_proposal(proposal_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    if user.role not in {UserRole.trusted_editor, UserRole.moderator, UserRole.admin}: raise HTTPException(403, "Editor role required")
+    require_editor(user)
     proposal = db.get(EditProposal, proposal_id)
     if not proposal or proposal.state != ModerationState.pending: raise HTTPException(404, "Pending proposal not found")
     surgeon = db.get(Surgeon, proposal.surgeon_id)

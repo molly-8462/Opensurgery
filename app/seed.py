@@ -61,7 +61,7 @@ def seed(db: Session) -> None:
     for source_item in SURGEONS:
         item = source_item.copy()
         article=item.pop("article"); profile=item.pop("profile")
-        surgeon=Surgeon(**item,is_published=True); db.add(surgeon); db.flush(); surgeon_map[surgeon.slug]=surgeon
+        surgeon=Surgeon(**item,is_published=True,lifecycle_status="published"); db.add(surgeon); db.flush(); surgeon_map[surgeon.slug]=surgeon
         db.execute(insert(surgeon_procedures), [{"surgeon_id":surgeon.id,"procedure_id":procedures[p].id} for p in links[surgeon.slug]])
         rev=SurgeonRevision(surgeon_id=surgeon.id,revision_number=124 if surgeon.slug=="mara-voss" else 1,author_id=users["JuniperNorth"].id,article_body=article,snapshot_json=json.dumps(profile),edit_summary="Seeded fictional demonstration profile.",change_type="Article text",kind=RevisionKind.reviewed,published_at=datetime(2026,5,12,9,17,tzinfo=timezone.utc)); db.add(rev); db.flush(); surgeon.current_revision_id=rev.id
     mara=surgeon_map["mara-voss"]

@@ -7,15 +7,19 @@ from sqlalchemy import func, select
 from fastapi import Response
 
 import json
+import pytest
+from fastapi import HTTPException
 
-from app.api import (approve_proposal, confirm_password_reset, conversation_messages, create_review,
-                     create_talk_topic, history, login, procedures, profile, proposal,
-                     reply_to_conversation, request_password_reset, send_message, surgeon,
-                     surgeon_reviews, surgeons, update_me)
+from app.api import (approve_proposal, approve_surgeon, confirm_password_reset, conversation_messages,
+                     create_review, create_surgeon, create_talk_topic, history, login,
+                     pending_surgeons, procedures, profile, proposal, remove_surgeon,
+                     reply_to_conversation, request_password_reset, restore_surgeon, send_message,
+                     surgeon, surgeon_reviews, surgeons, update_me)
 from app.database import Base, SessionLocal, engine
 from app.models import EmailOutbox, MediaAsset, Review, ReviewPhoto, ReviewRating, Surgeon, SurgeonRevision, User
 from app.schemas import (LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm,
-                         PasswordResetRequest, ProposalCreate, ReviewCreate, SettingsUpdate, TalkPost)
+                         PasswordResetRequest, ProposalCreate, ReviewCreate, SettingsUpdate,
+                         SurgeonCreate, SurgeonRemoval, TalkPost)
 from app.seed import seed
 from app.security import create_token, verify_password
 
@@ -117,3 +121,37 @@ def test_static_frontend_and_api_contracts_are_served_together():
     with SessionLocal() as db:
         chest = next(item for item in procedures(db)["items"] if item["slug"] == "chest-masculinization")
         assert {item["slug"] for item in chest["techniques"]} == {"double-incision", "periareolar", "buttonhole"}
+
+
+def test_new_surgeon_moderation_removal_and_restoration_lifecycle():
+    with SessionLocal() as db:
+        member = db.scalar(select(User).where(User.display_name == "RiverNorth"))
+        editor = db.scalar(select(User).where(User.display_name == "JuniperNorth"))
+        created = create_surgeon(SurgeonCreate(
+            display_name="Taylor Example", specialty="Reconstructive surgeon", city="Seattle",
+            region="Washington", country_code="US", practice_name="Example Practice",
+            article_body="Taylor Example is a fictional lifecycle test record with a public source.",
+            procedure_slugs=["chest-revision"], source_url="https://example.com/taylor",
+            source_note="Supports the identity and listed procedure."), member, db)
+        assert created["status"] == "pending"
+        assert all(item["slug"] != created["slug"] for item in surgeons(db=db)["items"])
+        assert any(item["id"] == created["id"] for item in pending_surgeons(editor, db)["items"])
+        with pytest.raises(HTTPException) as denied:
+            approve_surgeon(created["id"], member, db)
+        assert denied.value.status_code == 403
+
+        approved = approve_surgeon(created["id"], editor, db)
+        assert approved["status"] == "published"
+        assert surgeon(created["slug"], db)["name"] == "Taylor Example"
+
+        removed = remove_surgeon(created["slug"], SurgeonRemoval(
+            reason="Confirmed fictional vandalism test record.", status="removed"), editor, db)
+        assert removed["status"] == "removed"
+        assert all(item["slug"] != created["slug"] for item in surgeons(db=db)["items"])
+        with pytest.raises(HTTPException) as hidden:
+            surgeon(created["slug"], db)
+        assert hidden.value.status_code == 404
+
+        restored = restore_surgeon(created["slug"], editor, db)
+        assert restored["status"] == "published"
+        assert surgeon(created["slug"], db)["name"] == "Taylor Example"
