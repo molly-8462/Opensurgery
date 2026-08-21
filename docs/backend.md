@@ -8,7 +8,19 @@ The application is now served by FastAPI and stores relational records in Postgr
 CSS, and JavaScript are served by the same process, while browser code reads and writes data through
 the versioned `/api/v1` routes.
 
-## Local setup
+## Containerized setup
+
+1. Copy `.env.example` to `.env` and replace `SECRET_KEY` and `POSTGRES_PASSWORD`.
+2. Set `SEED_DEMO_DATA=true` only for an isolated fictional-data environment.
+3. Run `docker compose up -d --build`.
+4. Inspect startup with `docker compose logs -f app`.
+5. Open `http://127.0.0.1:8000`. Interactive API documentation is at `/api/docs`.
+
+The `app` service waits for the PostgreSQL health check. Its entrypoint runs `alembic upgrade head`,
+optionally runs `python -m app.seed`, and finally replaces itself with Uvicorn. Both database and
+processed-media data live in named volumes.
+
+## Host-based development setup
 
 1. Copy `.env.example` to `.env` and replace `SECRET_KEY`.
 2. Start PostgreSQL with `docker compose up -d db`.
@@ -19,8 +31,8 @@ the versioned `/api/v1` routes.
 6. Run the application with `.venv/bin/uvicorn app.main:app --reload`.
 7. Open `http://127.0.0.1:8000`. Interactive API documentation is at `/api/docs`.
 
-Seed accounts use the password `prototype-password` and reserved `example.com` email addresses. They are strictly
-development fixtures and must not be loaded in production.
+Seed accounts use the password `prototype-password` and reserved `example.com` email addresses. They
+are strictly development fixtures and must not be loaded in production.
 
 ## Data boundaries
 
