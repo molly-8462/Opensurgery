@@ -22,7 +22,7 @@ from app.schemas import (LoginRequest, MessageCreate, MessageReply, PasswordRese
                          SurgeonCreate, SurgeonRemoval, TalkPost)
 from app.seed import seed
 from app.security import create_token, verify_password
-from app.main import ASSETS_ROOT, PAGES_ROOT, PUBLIC_PAGES
+from app.main import ASSETS_ROOT, PAGES_ROOT, PUBLIC_PAGES, surgeon_profile_page, surgeon_section_page
 
 
 def setup_module():
@@ -49,15 +49,23 @@ def test_seeded_relations_and_public_queries():
         assert db.scalar(select(func.count()).select_from(ReviewRating)) == 3
 
 
-def test_surgeon_profile_template_hides_seed_content_until_hydrated():
-    page = (PAGES_ROOT / "index.html").read_text()
+def test_surgeon_pages_hide_seed_content_until_hydrated_and_never_default_to_mara():
     script = (ASSETS_ROOT / "js" / "script.js").read_text()
+    for filename in ("index.html", "reviews.html", "talk.html", "edit.html", "history.html", "revision.html"):
+        page = (PAGES_ROOT / filename).read_text()
+        assert 'data-surgeon-shell aria-busy="true"' in page
+        assert "profile-load-status" in page
+    assert '|| "mara-voss"' not in script
+    assert "const selectedSurgeonSlug = () =>" in script
+    assert "const finishSurgeonLoad = (error) =>" in script
 
-    assert "<title>Surgeon profile — OpenSurgery</title>" in page
-    assert 'data-surgeon-profile aria-busy="true"' in page
-    assert 'const finishProfileLoad = () =>' in script
-    assert 'profile?.removeAttribute("aria-busy")' in script
-    assert script.count("finishProfileLoad();") == 2
+
+def test_clean_surgeon_routes_serve_the_correct_page_shells():
+    assert str(surgeon_profile_page("adrian-lee").path).endswith("index.html")
+    assert str(surgeon_section_page("adrian-lee", "reviews").path).endswith("reviews.html")
+    with pytest.raises(HTTPException) as missing:
+        surgeon_section_page("adrian-lee", "unknown")
+    assert missing.value.status_code == 404
 
 
 def test_user_password_and_profile_privacy_boundary():

@@ -225,11 +225,15 @@ def surgeon(slug: str, db: Session = Depends(get_db)):
 
 
 @router.get("/surgeons/{slug}/reviews")
-def surgeon_reviews(slug: str, db: Session = Depends(get_db)):
+def surgeon_reviews(slug: str, db: Session = Depends(get_db), limit: int = 25, offset: int = 0):
     record = db.scalar(select(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True)))
     if not record: raise HTTPException(404, "Surgeon not found")
-    reviews = db.scalars(select(Review).where(Review.surgeon_id == record.id, Review.state == ModerationState.published).order_by(Review.published_at.desc())).all()
-    return {"items": [review_data(db, review) for review in reviews], "total": len(reviews)}
+    limit = max(1, min(limit, 100)); offset = max(0, offset)
+    filters = (Review.surgeon_id == record.id, Review.state == ModerationState.published)
+    total = db.scalar(select(func.count()).select_from(Review).where(*filters)) or 0
+    reviews = db.scalars(select(Review).where(*filters).order_by(Review.published_at.desc()).offset(offset).limit(limit)).all()
+    return {"items": [review_data(db, review) for review in reviews], "total": total,
+            "limit": limit, "offset": offset, "has_more": offset + len(reviews) < total}
 
 
 @router.get("/reviews/{slug}")

@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
     <meta
       name="description"
       content="Historical revision of the fictional Mara Voss surgeon profile."
@@ -40,7 +41,8 @@
     </aside>
 
     <div class="page-grid revision-grid">
-      <main id="revision-article" class="article revision-page">
+      <main id="revision-article" class="article revision-page" data-surgeon-shell aria-busy="true">
+        <p class="profile-load-status" role="status">Loading historical revision…</p>
         <div class="breadcrumb">
           <a href="directory.html">Surgeons</a> <span>›</span> <a href="index.html">Mara Voss</a>
           <span>›</span> <a href="history.html">History</a> <span>›</span> Revision

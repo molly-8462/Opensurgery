@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
     <meta name="description" content="Propose edits to the fictional Mara Voss surgeon profile." />
     <title>Edit Mara Voss — OpenSurgery</title>
     <link rel="stylesheet" href="/assets/css/styles.css" />
@@ -33,7 +34,8 @@
       ><small>Reserved for a clearly identified sponsor</small>
     </aside>
 
-    <form id="edit-form" class="page-grid edit-grid">
+    <form id="edit-form" class="page-grid edit-grid" data-surgeon-shell aria-busy="true">
+      <p class="profile-load-status" role="status">Loading surgeon editor…</p>
       <main class="article edit-page">
         <div class="breadcrumb">
           <a href="directory.html">Surgeons</a> <span>›</span> <a href="index.html">Mara Voss</a>

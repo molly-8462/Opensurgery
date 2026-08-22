@@ -192,6 +192,7 @@ document.querySelectorAll(".photo-slot.has-photo").forEach((button) => {
 });
 
 document.querySelectorAll(".load-more").forEach((button) => {
+  if (button.closest(".reviews-page")) return;
   button.addEventListener("click", () => { button.textContent = "All published reviews are loaded"; button.disabled = true; });
 });
 document.querySelector(".review-controls button")?.addEventListener("click", (event) => { event.currentTarget.textContent = "Filters applied"; });
@@ -209,7 +210,8 @@ document.querySelectorAll(".reply-button, [data-add-topic]").forEach((button) =>
       composer.addEventListener("submit", async (event) => {
         event.preventDefault(); if (!composer.reportValidity()) return;
         if (!signedInUser) { composer.querySelector(".form-status").textContent = "Log in before posting a topic."; return; }
-        const slug = queryParams.get("surgeon") || "mara-voss";
+        const slug = selectedSurgeonSlug();
+        if (!slug) { composer.querySelector(".form-status").textContent = "No surgeon was selected."; return; }
         try { await apiRequest(`/surgeons/${slug}/talk`, { method: "POST", body: JSON.stringify({ title: composer.querySelector("input").value, body: composer.querySelector("textarea").value }) }); composer.querySelector(".form-status").textContent = "Topic posted."; }
         catch (error) { composer.querySelector(".form-status").textContent = error.message; }
       });
@@ -252,13 +254,14 @@ if (directoryForm) {
 
 const surgeonPage = document.querySelector("[data-surgeon-page]");
 if (surgeonPage) {
-  const slug = queryParams.get("surgeon") || surgeonPage.dataset.surgeonPage || "mara-voss";
+  const slug = queryParams.get("surgeon") || surgeonPage.dataset.surgeonPage;
+  if (!slug) throw new Error("A surgeon slug is required for this page.");
   apiRequest(`/surgeons/${encodeURIComponent(slug)}`).then((record) => {
     const values = { "[data-surgeon-name]": record.name, "[data-surgeon-initials]": record.initials, "[data-surgeon-country]": record.country, "[data-surgeon-detail]": `${record.specialty} · ${[record.city, record.region, record.country].filter(Boolean).join(", ")}`, "[data-surgeon-procedure]": record.procedures.map((x) => x.name).join(", "), "[data-surgeon-reviews]": record.review_count, "[data-surgeon-overview]": record.article_body };
     Object.entries(values).forEach(([selector, value]) => { const node = document.querySelector(selector); if (node) node.textContent = value; });
-    document.querySelectorAll("[data-surgeon-link]").forEach((link) => { link.href = `index.html?surgeon=${record.slug}`; });
-    document.querySelectorAll("[data-surgeon-reviews-link]").forEach((link) => { link.href = `reviews.html?surgeon=${record.slug}`; });
-    document.querySelectorAll("[data-surgeon-talk-link]").forEach((link) => { link.href = `talk.html?surgeon=${record.slug}`; });
+    document.querySelectorAll("[data-surgeon-link]").forEach((link) => { link.href = surgeonUrl(record.slug); });
+    document.querySelectorAll("[data-surgeon-reviews-link]").forEach((link) => { link.href = surgeonUrl(record.slug, "reviews"); });
+    document.querySelectorAll("[data-surgeon-talk-link]").forEach((link) => { link.href = surgeonUrl(record.slug, "talk"); });
     document.title = `${record.name} — OpenSurgery`;
   }).catch((error) => { surgeonPage.querySelector("[data-surgeon-overview]").textContent = error.message; });
 }
@@ -421,20 +424,37 @@ document.querySelectorAll(".secondary-button").forEach((button) => {
 });
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
-const pageName = window.location.pathname.split("/").pop() || "home.html";
+const surgeonRouteMatch = window.location.pathname.match(/^\/surgeons\/([^/]+)(?:\/(reviews|talk|edit|history))?\/?$/);
+const surgeonRouteSlug = surgeonRouteMatch ? decodeURIComponent(surgeonRouteMatch[1]) : null;
+const surgeonRouteSection = surgeonRouteMatch?.[2] || "info";
+const surgeonSectionFiles = { info: "index.html", reviews: "reviews.html", talk: "talk.html", edit: "edit.html", history: "history.html" };
+const pageName = surgeonRouteMatch ? surgeonSectionFiles[surgeonRouteSection] : (window.location.pathname.split("/").pop() || "home.html");
+const selectedSurgeonSlug = () => surgeonRouteSlug || queryParams.get("surgeon");
+const surgeonUrl = (slug, section = "info") => `/surgeons/${encodeURIComponent(slug)}${section === "info" ? "" : `/${section}`}`;
+const finishSurgeonLoad = (error) => {
+  const shell = document.querySelector("[data-surgeon-shell]");
+  if (!shell) return;
+  shell.removeAttribute("aria-busy");
+  const status = shell.querySelector(".profile-load-status");
+  if (error && status) {
+    shell.dataset.loadError = "true";
+    status.textContent = error.message || "The surgeon page could not be loaded.";
+    status.setAttribute("role", "alert");
+  } else status?.remove();
+};
 
 const renderSurgeonCards = (container, surgeons, directoryRows = false) => {
   container.innerHTML = surgeons.map((surgeon) => directoryRows ? `
     <article data-name="${escapeHtml(surgeon.name)}" data-country="${escapeHtml(surgeon.country)}">
       <div class="directory-avatar">${escapeHtml(surgeon.initials)}</div><div>
-        <h2><a href="index.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h2>
+        <h2><a href="${surgeonUrl(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h2>
         <p>${escapeHtml(surgeon.specialty)} · ${escapeHtml([surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", "))}</p>
         <ul>${surgeon.procedures.map((procedure) => `<li>${escapeHtml(procedure.name)}</li>`).join("")}</ul>
         <span>${surgeon.review_count} published review${surgeon.review_count === 1 ? "" : "s"}</span>
-      </div><a class="row-action" href="index.html?surgeon=${encodeURIComponent(surgeon.slug)}">View profile →</a>
+      </div><a class="row-action" href="${surgeonUrl(surgeon.slug)}">View profile →</a>
     </article>` : `
     <article class="surgeon-card"><div class="surgeon-card__initials">${escapeHtml(surgeon.initials)}</div><div>
-      <h3><a href="index.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h3>
+      <h3><a href="${surgeonUrl(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h3>
       <p>${escapeHtml([surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", "))}</p>
       <div class="surgeon-card__meta"><span>${escapeHtml(surgeon.procedures[0]?.name || "Profile")}</span><span>${surgeon.review_count} reviews</span></div>
     </div></article>`).join("");
@@ -446,22 +466,21 @@ if (pageName === "home.html") {
 }
 
 if (pageName === "index.html") {
-  const slug = queryParams.get("surgeon") || "mara-voss";
+  const slug = selectedSurgeonSlug();
   const profile = document.querySelector("[data-surgeon-profile]");
-  const finishProfileLoad = () => {
-    profile?.removeAttribute("aria-busy");
-    profile?.querySelector(".profile-load-status")?.remove();
-  };
+  if (!slug) {
+    window.location.replace("directory.html");
+  } else
   apiRequest(`/surgeons/${encodeURIComponent(slug)}`).then((surgeon) => {
     document.title = `${surgeon.name} — OpenSurgery`;
     const title = document.querySelector(".article-header h1"); if (title) title.textContent = surgeon.name;
     const subtitle = document.querySelector(".article-header .subtitle"); if (subtitle) subtitle.textContent = `${surgeon.specialty || "Surgeon"} · ${[surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", ")}`;
     document.querySelectorAll(".article-navigation a, .edit-section, .portrait-placeholder, .article-footer a[href*='history.html']").forEach((link) => {
-      if (link.href.includes("index.html")) link.href = `index.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("edit.html")) link.href = `edit.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("history.html")) link.href = `history.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("index.html")) link.href = surgeonUrl(slug);
+      if (link.href.includes("reviews.html")) link.href = surgeonUrl(slug, "reviews");
+      if (link.href.includes("talk.html")) link.href = surgeonUrl(slug, "talk");
+      if (link.href.includes("edit.html")) link.href = surgeonUrl(slug, "edit");
+      if (link.href.includes("history.html")) link.href = surgeonUrl(slug, "history");
     });
     const reviewCount = document.querySelector(".article-navigation a[href*='reviews.html'] .count"); if (reviewCount) reviewCount.textContent = surgeon.review_count;
     const countryLink = document.querySelector(".breadcrumb a[href*='country=']");
@@ -485,16 +504,16 @@ if (pageName === "index.html") {
     const intro = document.querySelector("#intro");
     if (intro) intro.innerHTML = surgeon.article_body.split("\n\n").map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
     const practice = document.querySelector("#practice");
-    if (practice) practice.innerHTML = `<h2>Practice <a class="edit-section" href="edit.html?surgeon=${encodeURIComponent(slug)}#edit-practice">edit</a></h2><p>${escapeHtml(surgeon.profile.practice_summary || `${surgeon.name} is associated with ${surgeon.profile.practice || "a practice that is not yet listed"}.`)}</p>`;
+    if (practice) practice.innerHTML = `<h2>Practice <a class="edit-section" href="${surgeonUrl(slug, "edit")}#edit-practice">edit</a></h2><p>${escapeHtml(surgeon.profile.practice_summary || `${surgeon.name} is associated with ${surgeon.profile.practice || "a practice that is not yet listed"}.`)}</p>`;
     const procedures = document.querySelector("#procedures");
-    if (procedures) procedures.innerHTML = `<h2>Procedures and techniques <a class="edit-section" href="edit.html?surgeon=${encodeURIComponent(slug)}#edit-procedures">edit</a></h2><p>These procedures are linked to this community-maintained profile. Availability and technique should be confirmed directly with the practice.</p>${surgeon.procedures.length ? surgeon.procedures.map((item) => `<h3>${escapeHtml(item.name)}</h3>`).join("") : "<p>No procedures are currently listed.</p>"}`;
+    if (procedures) procedures.innerHTML = `<h2>Procedures and techniques <a class="edit-section" href="${surgeonUrl(slug, "edit")}#edit-procedures">edit</a></h2><p>These procedures are linked to this community-maintained profile. Availability and technique should be confirmed directly with the practice.</p>${surgeon.procedures.length ? surgeon.procedures.map((item) => `<h3>${escapeHtml(item.name)}</h3>`).join("") : "<p>No procedures are currently listed.</p>"}`;
     const patientInfo = document.querySelector("#patient-information");
     if (patientInfo) patientInfo.innerHTML = `<h2>Patient information <a class="edit-section" href="edit.html?surgeon=${encodeURIComponent(slug)}#edit-patient-information">edit</a></h2><p>Community members have published <a href="reviews.html?surgeon=${encodeURIComponent(slug)}"><strong>${surgeon.review_count} review${surgeon.review_count === 1 ? "" : "s"} of ${escapeHtml(surgeon.name)}</strong></a>. Reviews are first-person accounts and are maintained separately from this article.</p><div class="review-callout"><div><strong>Have experience with this surgeon?</strong><span>Your review can help others understand the consultation and recovery process.</span></div><a href="write-review.html?surgeon=${encodeURIComponent(slug)}">Write a review</a></div>`;
     const references = document.querySelector("#references");
-    if (references) references.innerHTML = `<h2>References</h2><p>Sources are stored with the profile's revision and proposal history. <a href="history.html?surgeon=${encodeURIComponent(slug)}">View edit history</a>.</p>`;
+    if (references) references.innerHTML = `<h2>References</h2><p>Sources are stored with the profile's revision and proposal history. <a href="${surgeonUrl(slug, "history")}">View edit history</a>.</p>`;
     const external = document.querySelector("#external-links");
     if (external) external.innerHTML = `<h2>External links</h2>${surgeon.website_url ? `<ul><li><a href="${escapeHtml(surgeon.website_url)}" rel="noopener noreferrer">Practice website</a></li></ul>` : "<p>No external website is currently listed.</p>"}`;
-    finishProfileLoad();
+    finishSurgeonLoad();
   }).catch((error) => {
     document.title = "Surgeon profile unavailable — OpenSurgery";
     const header = document.querySelector(".article-header h1");
@@ -502,7 +521,7 @@ if (pageName === "index.html") {
     const intro = document.querySelector("#intro");
     if (intro) intro.innerHTML = `<p>${escapeHtml(error.message)}</p><p><a href="directory.html">Return to the surgeon directory</a>.</p>`;
     document.querySelectorAll(".article-body > :not(#intro), .prototype-note, .mobile-contents, .article-footer").forEach((node) => { node.hidden = true; });
-    finishProfileLoad();
+    finishSurgeonLoad();
   });
 }
 
@@ -522,26 +541,45 @@ if (pageName === "directory.html") {
 }
 
 if (pageName === "reviews.html") {
-  const slug = queryParams.get("surgeon") || "mara-voss";
+  const slug = selectedSurgeonSlug();
+  if (!slug) window.location.replace("directory.html"); else
   Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/reviews`)]).then(([surgeon, data]) => {
     document.title = `Reviews of ${surgeon.name} — OpenSurgery`;
     document.querySelectorAll(".title-row h1").forEach((node) => { node.textContent = surgeon.name; });
     const subtitle = document.querySelector(".article-header .subtitle"); if (subtitle) subtitle.textContent = `${surgeon.specialty || "Surgeon"} · ${[surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", ")}`;
     document.querySelectorAll(".article-navigation a").forEach((link) => {
-      if (link.href.includes("index.html")) link.href = `index.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("index.html")) link.href = surgeonUrl(slug);
+      if (link.href.includes("reviews.html")) link.href = surgeonUrl(slug, "reviews");
+      if (link.href.includes("talk.html")) link.href = surgeonUrl(slug, "talk");
       if (link.href.includes("write-review.html")) link.href = `write-review.html?surgeon=${encodeURIComponent(slug)}`;
     });
     const sidebarTotal = document.querySelector(".review-sidebar > strong"); if (sidebarTotal) sidebarTotal.textContent = `${data.total} review${data.total === 1 ? "" : "s"}`;
+    const sidebarBreakdown = document.querySelector(".review-sidebar dl"); if (sidebarBreakdown) sidebarBreakdown.hidden = true;
+    const procedureFilter = document.querySelector(".review-controls select");
+    if (procedureFilter) procedureFilter.innerHTML = '<option>All procedures</option>' + surgeon.procedures.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
     const reviewTabCount = document.querySelector(".article-navigation a[href*='reviews.html'] .count"); if (reviewTabCount) reviewTabCount.textContent = data.total;
     document.querySelectorAll(".review-group").forEach((group, index) => {
       if (index) { group.hidden = true; return; }
       const header = group.querySelector(".review-group__header span"); if (header) header.textContent = `${data.total} reviews`;
       group.querySelectorAll(".review-row").forEach((row) => row.remove());
-      data.items.forEach((review) => group.insertAdjacentHTML("beforeend", `<article class="review-row"><a class="review-row__body" href="review.html?review=${encodeURIComponent(review.slug)}"><div class="review-byline"><span class="user-avatar">${escapeHtml(review.reviewer[0])}</span><div><strong>${escapeHtml(review.reviewer)}</strong><span>${escapeHtml(review.updated_at.slice(0,10))}</span></div></div><dl class="review-meta"><div><dt>Procedure</dt><dd>${escapeHtml(review.procedure)}</dd></div><div><dt>Technique</dt><dd>${escapeHtml(review.technique)}</dd></div></dl><p>${escapeHtml(review.narrative.slice(0,220))}…</p><span class="read-more">Read full review →</span></a></article>`));
+      const loadMore = group.querySelector(".load-more");
+      const appendReviews = (items) => items.forEach((review) => loadMore?.insertAdjacentHTML("beforebegin", `<article class="review-row"><a class="review-row__body" href="review.html?review=${encodeURIComponent(review.slug)}"><div class="review-byline"><span class="user-avatar">${escapeHtml(review.reviewer[0])}</span><div><strong>${escapeHtml(review.reviewer)}</strong><span>${escapeHtml(review.updated_at.slice(0,10))}</span></div></div><dl class="review-meta"><div><dt>Procedure</dt><dd>${escapeHtml(review.procedure)}</dd></div><div><dt>Technique</dt><dd>${escapeHtml(review.technique)}</dd></div></dl><p>${escapeHtml(review.narrative.slice(0,220))}…</p><span class="read-more">Read full review →</span></a></article>`));
+      appendReviews(data.items);
+      if (loadMore) {
+        loadMore.hidden = !data.has_more;
+        loadMore.textContent = "Load more reviews";
+        loadMore.addEventListener("click", async () => {
+          loadMore.disabled = true;
+          try {
+            const next = await apiRequest(`/surgeons/${encodeURIComponent(slug)}/reviews?offset=${group.querySelectorAll(".review-row").length}&limit=${data.limit}`);
+            appendReviews(next.items); loadMore.hidden = !next.has_more;
+          } catch (error) { loadMore.textContent = error.message; }
+          finally { loadMore.disabled = false; }
+        });
+      }
     });
-  });
+    finishSurgeonLoad();
+  }).catch(finishSurgeonLoad);
 }
 
 if (pageName === "review.html") {
@@ -551,29 +589,32 @@ if (pageName === "review.html") {
     document.querySelector(".review-detail-header p").innerHTML = `First-person experience by <a href="profile.html?user=${encodeURIComponent(review.reviewer)}">${escapeHtml(review.reviewer)}</a>`;
     document.querySelector(".review-detail-content article").innerHTML = review.narrative.split("\n\n").map((text) => `<p>${escapeHtml(text)}</p>`).join("");
     const surgeonLink = document.querySelector(".breadcrumb a:nth-of-type(2)");
-    if (surgeonLink) { surgeonLink.textContent = review.surgeon.name; surgeonLink.href = `index.html?surgeon=${encodeURIComponent(review.surgeon.slug)}`; }
+    if (surgeonLink) { surgeonLink.textContent = review.surgeon.name; surgeonLink.href = surgeonUrl(review.surgeon.slug); }
     const reviewsLink = document.querySelector(".breadcrumb a[href*='reviews.html']"); if (reviewsLink) reviewsLink.href = `reviews.html?surgeon=${encodeURIComponent(review.surgeon.slug)}`;
   });
 }
 
 if (pageName === "history.html") {
-  const slug = queryParams.get("surgeon") || "mara-voss";
+  const slug = selectedSurgeonSlug();
+  if (!slug) window.location.replace("directory.html"); else
   Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/history`)]).then(([surgeon, data]) => {
     document.title = `Revision history of ${surgeon.name} — OpenSurgery`;
     document.querySelector(".history-page h1").textContent = `${surgeon.name} revision history`;
+    const subtitle = document.querySelector(".history-page .subtitle"); if (subtitle) subtitle.textContent = `${surgeon.name} · Info page`;
     document.querySelectorAll(".article-navigation a, .breadcrumb a").forEach((link) => {
-      if (link.href.includes("index.html")) link.href = `index.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("edit.html")) link.href = `edit.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("history.html")) link.href = `history.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("index.html")) link.href = surgeonUrl(slug);
+      if (link.href.includes("reviews.html")) link.href = surgeonUrl(slug, "reviews");
+      if (link.href.includes("talk.html")) link.href = surgeonUrl(slug, "talk");
+      if (link.href.includes("edit.html")) link.href = surgeonUrl(slug, "edit");
+      if (link.href.includes("history.html")) link.href = surgeonUrl(slug, "history");
     });
     const list = document.querySelector("#history-list"); list.innerHTML = data.items.map((revision) => `<article class="revision"><div class="revision-main"><div class="revision-title"><a href="revision.html?surgeon=${encodeURIComponent(slug)}&revision=${revision.revision_number}">${escapeHtml(new Date(revision.published_at).toLocaleString())}</a></div><p>${escapeHtml(revision.summary)}</p><div class="revision-meta"><a href="profile.html?user=${encodeURIComponent(revision.editor)}">${escapeHtml(revision.editor)}</a><span>${escapeHtml(revision.change_type)}</span></div></div><div class="revision-actions"><a href="revision.html?surgeon=${encodeURIComponent(slug)}&revision=${revision.revision_number}">view version</a></div></article>`).join("");
-  });
+    finishSurgeonLoad();
+  }).catch(finishSurgeonLoad);
 }
 
 if (pageName === "revision.html") {
-  const slug = queryParams.get("surgeon") || "mara-voss"; const number = queryParams.get("revision");
+  const slug = selectedSurgeonSlug(); const number = queryParams.get("revision");
   if (number) Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/revisions/${number}`)]).then(([surgeon, revision]) => {
     document.querySelector(".revision-page h1").textContent = surgeon.name;
     document.querySelectorAll("[data-revision-number]").forEach((node) => { node.textContent = revision.revision_number; });
@@ -581,26 +622,30 @@ if (pageName === "revision.html") {
     const summary = document.querySelector("[data-revision-summary]"); if (summary) summary.textContent = revision.summary;
     const body = document.querySelector(".revision-page .article-body");
     if (body) body.innerHTML = revision.article_body.split("\n\n").map((text) => `<p>${escapeHtml(text)}</p>`).join("");
-  });
+    finishSurgeonLoad();
+  }).catch(finishSurgeonLoad);
 }
 
 if (pageName === "talk.html") {
-  const slug = queryParams.get("surgeon") || "mara-voss";
+  const slug = selectedSurgeonSlug();
+  if (!slug) window.location.replace("directory.html"); else
   Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/talk`)]).then(([surgeon, data]) => {
     document.title = `Talk: ${surgeon.name} — OpenSurgery`;
     const title = document.querySelector(".talk-page .title-row h1"); if (title) title.innerHTML = `<span class="namespace">Talk:</span> ${escapeHtml(surgeon.name)}`;
     const subtitle = document.querySelector(".talk-page .subtitle"); if (subtitle) subtitle.textContent = `Discussion about improvements to the ${surgeon.name} information page`;
-    const breadcrumbSurgeon = document.querySelector(".talk-page .breadcrumb a:nth-of-type(2)"); if (breadcrumbSurgeon) { breadcrumbSurgeon.textContent = surgeon.name; breadcrumbSurgeon.href = `index.html?surgeon=${encodeURIComponent(slug)}`; }
+    const introNotice = document.querySelector(".talk-notice--intro strong"); if (introNotice) introNotice.textContent = `This is the discussion page for improving the ${surgeon.name} article.`;
+    const breadcrumbSurgeon = document.querySelector(".talk-page .breadcrumb a:nth-of-type(2)"); if (breadcrumbSurgeon) { breadcrumbSurgeon.textContent = surgeon.name; breadcrumbSurgeon.href = surgeonUrl(slug); }
     document.querySelectorAll(".article-navigation a").forEach((link) => {
-      if (link.href.includes("index.html")) link.href = `index.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
-      if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("index.html")) link.href = surgeonUrl(slug);
+      if (link.href.includes("reviews.html")) link.href = surgeonUrl(slug, "reviews");
+      if (link.href.includes("talk.html")) link.href = surgeonUrl(slug, "talk");
     });
     const firstTopic = document.querySelector(".talk-topic"); if (!firstTopic) return;
     document.querySelectorAll(".talk-topic:not(#new-topic)").forEach((node) => node.remove());
     const toolbar = document.querySelector(".discussion-toolbar");
     data.items.forEach((topic) => toolbar.insertAdjacentHTML("afterend", `<section class="talk-topic" id="${escapeHtml(topic.slug)}"><header class="topic-heading"><h2>${escapeHtml(topic.title)}</h2></header><div class="comment-thread">${topic.comments.map((comment) => `<article class="comment"><div class="comment-marker">${escapeHtml(comment.author[0])}</div><div><p>${escapeHtml(comment.body)}</p><footer><a href="profile.html?user=${encodeURIComponent(comment.author)}">${escapeHtml(comment.author)}</a> <time>${escapeHtml(new Date(comment.created_at).toLocaleString())}</time></footer></div></article>`).join("")}</div></section>`));
-  });
+    finishSurgeonLoad();
+  }).catch(finishSurgeonLoad);
 }
 
 if (pageName === "procedures.html") {
@@ -626,13 +671,13 @@ if (pageName === "practice.html") {
   apiRequest("/practices/northbank-reconstructive-center").then((practice) => {
     document.querySelectorAll(".practice-shell h1").forEach((node) => { node.textContent = practice.name; });
     const content = document.querySelector("[data-practice-content]");
-    if (content) content.innerHTML = `<h2>Locations</h2>${practice.locations.map((location) => `<p><strong>${escapeHtml([location.city, location.region].filter(Boolean).join(", "))}</strong><br>${escapeHtml(location.accessibility || "Accessibility information not listed.")}</p>`).join("")}<h2>Linked surgeons</h2>${practice.surgeons.map((surgeon) => `<p><a href="index.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></p>`).join("")}`;
+    if (content) content.innerHTML = `<h2>Locations</h2>${practice.locations.map((location) => `<p><strong>${escapeHtml([location.city, location.region].filter(Boolean).join(", "))}</strong><br>${escapeHtml(location.accessibility || "Accessibility information not listed.")}</p>`).join("")}<h2>Linked surgeons</h2>${practice.surgeons.map((surgeon) => `<p><a href="${surgeonUrl(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></p>`).join("")}`;
   });
 }
 
 if (pageName === "pending.html") {
   apiRequest("/proposals").then((data) => {
-    const list = document.querySelector(".proposal-list"); list.innerHTML = data.items.map((proposal) => `<article><span>${escapeHtml(proposal.state)}</span><h2>${escapeHtml(proposal.summary)}</h2><p><a href="index.html?surgeon=${encodeURIComponent(proposal.surgeon.slug)}">${escapeHtml(proposal.surgeon.name)}</a> · Proposed by ${escapeHtml(proposal.author)}</p></article>`).join("");
+    const list = document.querySelector(".proposal-list"); list.innerHTML = data.items.map((proposal) => `<article><span>${escapeHtml(proposal.state)}</span><h2>${escapeHtml(proposal.summary)}</h2><p><a href="${surgeonUrl(proposal.surgeon.slug)}">${escapeHtml(proposal.surgeon.name)}</a> · Proposed by ${escapeHtml(proposal.author)}</p></article>`).join("");
     apiRequest("/me").then((user) => {
       if (!["trusted_editor", "moderator", "admin"].includes(user.role)) return;
       apiRequest("/moderation/surgeons").then((submissions) => {
@@ -641,7 +686,7 @@ if (pageName === "pending.html") {
           const article = button.closest("[data-surgeon-submission]");
           try {
             const result = await apiRequest(`/moderation/surgeons/${article.dataset.surgeonSubmission}/approve`, { method: "POST" });
-            article.innerHTML = `<span>Published</span><h2>Profile approved</h2><p><a href="index.html?surgeon=${encodeURIComponent(result.slug)}">Open the published profile</a></p>`;
+            article.innerHTML = `<span>Published</span><h2>Profile approved</h2><p><a href="${surgeonUrl(result.slug)}">Open the published profile</a></p>`;
           } catch (error) { button.insertAdjacentHTML("afterend", `<p class="form-status">${escapeHtml(error.message)}</p>`); }
         }));
       });
@@ -654,7 +699,7 @@ if (pageName === "search.html") {
   const query = queryParams.get("q") || "";
   Promise.all([apiRequest(`/surgeons?q=${encodeURIComponent(query)}`), apiRequest("/procedures")]).then(([surgeons, procedures]) => {
     const matchingProcedures = procedures.items.filter((item) => !query || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase()));
-    list.innerHTML = surgeons.items.map((item) => `<article><span>Surgeon</span><h2><a href="index.html?surgeon=${encodeURIComponent(item.slug)}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.specialty || "Surgeon profile")}</p></article>`).join("") + matchingProcedures.map((item) => `<article><span>Procedure</span><h2><a href="procedures.html#${encodeURIComponent(item.category.toLowerCase())}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.description)}</p></article>`).join("");
+    list.innerHTML = surgeons.items.map((item) => `<article><span>Surgeon</span><h2><a href="${surgeonUrl(item.slug)}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.specialty || "Surgeon profile")}</p></article>`).join("") + matchingProcedures.map((item) => `<article><span>Procedure</span><h2><a href="procedures.html#${encodeURIComponent(item.category.toLowerCase())}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.description)}</p></article>`).join("");
     const summary = document.querySelector("[data-search-summary]"); if (summary) summary.textContent = `${surgeons.total + matchingProcedures.length} matching results.`;
   });
 }
@@ -730,7 +775,8 @@ if (pageName === "add-surgeon.html") {
 if (["index.html", "surgeon.html"].includes(pageName)) {
   apiRequest("/me").then((user) => {
     if (!["trusted_editor", "moderator", "admin"].includes(user.role)) return;
-    const slug = queryParams.get("surgeon") || "mara-voss";
+    const slug = selectedSurgeonSlug();
+    if (!slug) return;
     const container = document.querySelector(".article-navigation nav:last-child, .dynamic-surgeon__content aside");
     if (!container || container.querySelector("[data-remove-surgeon]")) return;
     const button = document.createElement("button"); button.type = "button"; button.dataset.removeSurgeon = ""; button.textContent = "Remove profile";
@@ -802,7 +848,8 @@ if (pageName === "forgot-password.html") {
 }
 
 if (pageName === "edit.html") {
-  const slug = queryParams.get("surgeon") || "mara-voss"; const form = document.querySelector("#edit-form");
+  const slug = selectedSurgeonSlug(); const form = document.querySelector("#edit-form");
+  if (!slug) window.location.replace("directory.html"); else
   Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest("/procedures")]).then(([surgeon, procedures]) => {
     document.title = `Edit ${surgeon.name} — OpenSurgery`;
     document.querySelector(".edit-page h1").textContent = `Edit ${surgeon.name}`;
@@ -819,9 +866,10 @@ if (pageName === "edit.html") {
     form.elements.procedures.innerHTML = procedureOptions;
     form.elements.sidebar_procedures.innerHTML = procedureOptions;
     [form.elements.procedures, form.elements.sidebar_procedures].forEach((select) => [...select.options].forEach((option) => { option.selected = selectedSlugs.has(option.value); }));
-    document.querySelectorAll(".breadcrumb a[href*='index.html'], .article-navigation a[href*='index.html']").forEach((link) => { link.href = `index.html?surgeon=${encodeURIComponent(slug)}`; link.textContent = link.closest(".breadcrumb") ? surgeon.name : "← Return to Info"; });
-    document.querySelectorAll("a[href*='history.html']").forEach((link) => { link.href = `history.html?surgeon=${encodeURIComponent(slug)}`; });
-  });
+    document.querySelectorAll(".breadcrumb a[href*='index.html'], .article-navigation a[href*='index.html']").forEach((link) => { link.href = surgeonUrl(slug); link.textContent = link.closest(".breadcrumb") ? surgeon.name : "← Return to Info"; });
+    document.querySelectorAll("a[href*='history.html']").forEach((link) => { link.href = surgeonUrl(slug, "history"); });
+    finishSurgeonLoad();
+  }).catch(finishSurgeonLoad);
   form?.addEventListener("submit", async (event) => {
     event.preventDefault(); if (!signedInUser) { form.querySelector(".form-status").textContent = "Log in before submitting a proposal."; return; }
     const selectedProcedures = [...form.elements.sidebar_procedures.selectedOptions].map((option) => option.value);

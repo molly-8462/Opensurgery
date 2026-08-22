@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
     <meta
       name="description"
       content="Community discussion about the fictional Mara Voss surgeon profile."
@@ -36,7 +37,8 @@
       ><small>Reserved for a clearly identified sponsor</small>
     </aside>
 
-    <div class="page-grid talk-grid">
+    <div class="page-grid talk-grid" data-surgeon-shell aria-busy="true">
+      <p class="profile-load-status" role="status">Loading surgeon discussion…</p>
       <aside class="contents talk-contents" aria-label="Talk page contents">
         <div class="contents__heading">
           <strong>Contents</strong><button type="button">hide</button>

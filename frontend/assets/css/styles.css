@@ -882,7 +882,11 @@ button.photo-slot { cursor: pointer; }
   .comment--level-2 { margin-left: 36px; }
   .discussion-toolbar { align-items: flex-start; }
 }
-[data-surgeon-profile][aria-busy="true"] > :not(.profile-load-status) {
+[data-surgeon-shell][aria-busy="true"] > :not(.profile-load-status) {
+  visibility: hidden;
+}
+
+[data-surgeon-shell][data-load-error="true"] > :not(.profile-load-status) {
   visibility: hidden;
 }
 

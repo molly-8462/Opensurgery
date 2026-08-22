@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
     <meta name="description" content="A community-maintained surgeon information page prototype." />
     <title>Surgeon profile — OpenSurgery</title>
     <link rel="stylesheet" href="/assets/css/styles.css" />
@@ -52,7 +53,7 @@
         </aside>
       </aside>
 
-      <main id="article" class="article" data-surgeon-profile aria-busy="true">
+      <main id="article" class="article" data-surgeon-profile data-surgeon-shell aria-busy="true">
         <p class="profile-load-status" role="status">Loading surgeon profile…</p>
         <div class="breadcrumb">
           <a href="directory.html">Surgeons</a> <span>›</span>
