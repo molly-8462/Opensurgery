@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="A community-maintained surgeon information page prototype." />
-    <title>Mara Voss — OpenSurgery</title>
+    <title>Surgeon profile — OpenSurgery</title>
     <link rel="stylesheet" href="/assets/css/styles.css" />
     <script src="/assets/js/script.js" defer></script>
   </head>
@@ -52,7 +52,8 @@
         </aside>
       </aside>
 
-      <main id="article" class="article">
+      <main id="article" class="article" data-surgeon-profile aria-busy="true">
+        <p class="profile-load-status" role="status">Loading surgeon profile…</p>
         <div class="breadcrumb">
           <a href="directory.html">Surgeons</a> <span>›</span>
           <a href="directory.html?country=United%20States">United States</a>

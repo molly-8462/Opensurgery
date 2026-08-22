@@ -447,6 +447,11 @@ if (pageName === "home.html") {
 
 if (pageName === "index.html") {
   const slug = queryParams.get("surgeon") || "mara-voss";
+  const profile = document.querySelector("[data-surgeon-profile]");
+  const finishProfileLoad = () => {
+    profile?.removeAttribute("aria-busy");
+    profile?.querySelector(".profile-load-status")?.remove();
+  };
   apiRequest(`/surgeons/${encodeURIComponent(slug)}`).then((surgeon) => {
     document.title = `${surgeon.name} — OpenSurgery`;
     const title = document.querySelector(".article-header h1"); if (title) title.textContent = surgeon.name;
@@ -489,7 +494,16 @@ if (pageName === "index.html") {
     if (references) references.innerHTML = `<h2>References</h2><p>Sources are stored with the profile's revision and proposal history. <a href="history.html?surgeon=${encodeURIComponent(slug)}">View edit history</a>.</p>`;
     const external = document.querySelector("#external-links");
     if (external) external.innerHTML = `<h2>External links</h2>${surgeon.website_url ? `<ul><li><a href="${escapeHtml(surgeon.website_url)}" rel="noopener noreferrer">Practice website</a></li></ul>` : "<p>No external website is currently listed.</p>"}`;
-  }).catch((error) => { const intro = document.querySelector("#intro"); if (intro) intro.textContent = error.message; });
+    finishProfileLoad();
+  }).catch((error) => {
+    document.title = "Surgeon profile unavailable — OpenSurgery";
+    const header = document.querySelector(".article-header h1");
+    if (header) header.textContent = "Surgeon profile unavailable";
+    const intro = document.querySelector("#intro");
+    if (intro) intro.innerHTML = `<p>${escapeHtml(error.message)}</p><p><a href="directory.html">Return to the surgeon directory</a>.</p>`;
+    document.querySelectorAll(".article-body > :not(#intro), .prototype-note, .mobile-contents, .article-footer").forEach((node) => { node.hidden = true; });
+    finishProfileLoad();
+  });
 }
 
 if (pageName === "directory.html") {

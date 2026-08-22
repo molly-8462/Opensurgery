@@ -186,6 +186,15 @@ creating a new immutable revision. Email delivery, malware scanning, object-stor
 production rate limiting, and operational moderation tooling remain deployment work rather than
 features that the user interface should imply are already active.
 
+Surgeon profiles now use the fully formatted Mara Voss article layout as one repeatable, data-driven
+template. Directory, home, search, practice, proposal, and moderation links open that shared template
+with the surgeon's canonical slug. The template retrieves the selected surgeon's article, structured
+facts, procedures, review count, and external links from the API. `Info`, `Reviews`, `Talk`, `Edit`,
+`History`, and `Write a review` preserve that slug as users move between views, preventing navigation
+from silently falling back to Mara Voss. The editor also loads the selected surgeon's current facts
+and database-backed procedure choices. Consequently, newly approved surgeon records receive the same
+profile layout and working contribution flows without requiring a surgeon-specific HTML page.
+
 The distinct palette, wordmark, advertising treatment, and component styling are intentional product-identity choices. They reduce the chance that users could mistake OpenSurgery for an official Wikipedia/Wikimedia project and address the trade-dress concern created by borrowing familiar wiki information architecture. Before public launch, include a plain-language non-affiliation statement in the public policies and have the final brand presentation reviewed in the operating jurisdiction.
 
 ## Advertising and sponsorship

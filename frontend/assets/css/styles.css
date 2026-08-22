@@ -882,3 +882,14 @@ button.photo-slot { cursor: pointer; }
   .comment--level-2 { margin-left: 36px; }
   .discussion-toolbar { align-items: flex-start; }
 }
+[data-surgeon-profile][aria-busy="true"] > :not(.profile-load-status) {
+  visibility: hidden;
+}
+
+.profile-load-status {
+  min-height: 24rem;
+  margin: 0;
+  padding: 3rem 1rem;
+  color: var(--muted, #54595d);
+  text-align: center;
+}

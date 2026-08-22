@@ -49,6 +49,17 @@ def test_seeded_relations_and_public_queries():
         assert db.scalar(select(func.count()).select_from(ReviewRating)) == 3
 
 
+def test_surgeon_profile_template_hides_seed_content_until_hydrated():
+    page = (PAGES_ROOT / "index.html").read_text()
+    script = (ASSETS_ROOT / "js" / "script.js").read_text()
+
+    assert "<title>Surgeon profile — OpenSurgery</title>" in page
+    assert 'data-surgeon-profile aria-busy="true"' in page
+    assert 'const finishProfileLoad = () =>' in script
+    assert 'profile?.removeAttribute("aria-busy")' in script
+    assert script.count("finishProfileLoad();") == 2
+
+
 def test_user_password_and_profile_privacy_boundary():
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.display_name == "RiverNorth"))
