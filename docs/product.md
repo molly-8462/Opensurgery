@@ -86,7 +86,7 @@ The label must explain that it verifies only the presence and user-stated timing
 Do not make every saved edit immediately authoritative. Use:
 
 1. A published surgeon revision.
-2. User-submitted edit proposals with an edit summary and sources.
+2. User-submitted edit proposals with an edit summary and optional sources.
 3. A read-only preview of the proposed page and every published historical version; no side-by-side comparison interface.
 4. Approval, rejection, or rollback by trusted editors/moderators.
 5. A permanent audit trail that omits private moderator notes.
@@ -94,11 +94,11 @@ Do not make every saved edit immediately authoritative. Use:
 
 New accounts should have tighter edit and upload limits. Trust can grow through account age and accepted contributions, but should not make a user immune from review.
 
-Every published revision should record its author, timestamp, edit summary, sources, and parent revision. Anyone can open a read-only snapshot of an individual historical revision, while authorized editors can restore it by creating a new revision without destroying later history. Talk comments also need authorship, timestamps, permalinks, moderation state, and their own non-destructive history. A more formal dispute-escalation system inspired by Wikipedia can be added after the core editing and moderation workflows are stable.
+Every published revision should record its author, timestamp, edit summary, any supplied sources, and parent revision. Anyone can open a read-only snapshot of an individual historical revision, while authorized editors can restore it by creating a new revision without destroying later history. Talk comments also need authorship, timestamps, permalinks, moderation state, and their own non-destructive history. A more formal dispute-escalation system inspired by Wikipedia can be added after the core editing and moderation workflows are stable.
 
 The public history view should list immutable published revisions with timestamps, contributor attribution, edit summaries, change types, and permanent links. Selecting a revision opens a read-only snapshot of the full page as it appeared at that time. Authorized actions such as undo and rollback create new revisions rather than deleting or rewriting old history. Clearly distinguish the current, reviewed, and rollback states, while keeping private moderation notes out of the public log.
 
-The surgeon editor should pair clear article-section text areas with structured profile fields. Practice and website links use URL validation; location is split into city, region, and country; procedures come from database-backed multi-select options; and portrait changes require an image upload plus a publication-rights confirmation. Every proposal requires at least one source URL, a note explaining what it supports, and an edit summary. Contributors may save a draft or preview changes before submitting the proposal for review. Clicking an article's section-level edit control should open the editor at that section.
+The surgeon editor should pair clear article-section text areas with structured profile fields. Practice and website links use URL validation; location is split into city, region, and country; procedures come from database-backed multi-select options; and portrait changes require an image upload plus a publication-rights confirmation. Every proposal requires an edit summary; source URLs and supporting notes are optional. Contributors may save a draft or preview changes before submitting the proposal for review. Clicking an article's section-level edit control should open the editor at that section.
 
 ## MVP
 

@@ -51,8 +51,8 @@ class ProposalCreate(BaseModel):
     proposed_article_body: str = Field(min_length=20, max_length=100000)
     edit_summary: str = Field(min_length=5, max_length=500)
     change_type: str = Field(default="Article text", max_length=80)
-    source_url: HttpUrl
-    source_note: str = Field(min_length=5, max_length=2000)
+    source_url: HttpUrl | None = None
+    source_note: str | None = Field(default=None, max_length=2000)
     profile: dict = Field(default_factory=dict)
     procedure_slugs: list[str] = Field(default_factory=list)
 

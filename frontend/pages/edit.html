@@ -63,7 +63,7 @@
         <div class="editor-notice">
           <strong>Your changes will not publish immediately.</strong
           ><span
-            >They will be saved as a proposal with your sources and edit summary, then reviewed by a
+            >They will be saved as a proposal with your edit summary and any optional sources, then reviewed by a
             community editor.</span
           >
         </div>
@@ -84,7 +84,7 @@ Voss practices at the fictional Northbank Reconstructive Center, which reports a
           >
           <p class="field-help">
             Write neutrally and avoid promotional claims. Significant factual changes require a
-            source below.
+            source when one is available.
           </p>
         </section>
 
@@ -102,7 +102,7 @@ Voss is listed as a surgeon at Northbank Reconstructive Center in Portland. Publ
           >
           <p class="field-help">
             Edit the structured practice name and link in Profile facts. The citation added under
-            Sources must support this description.
+            If you add a source, it should support this description.
           </p>
         </section>
 
@@ -161,7 +161,7 @@ The Portland clinic reports a step-free main entrance. English and Spanish are l
               <span>05</span>
               <h2>Sources</h2>
             </div>
-            <small>Required for factual changes</small>
+            <small>Optional supporting information</small>
           </header>
           <div class="source-fields">
             <label
@@ -169,14 +169,12 @@ The Portland clinic reports a step-free main entrance. English and Spanish are l
                 type="text"
                 name="source_title"
                 placeholder="Page or publication title"
-                required
             /></label>
             <label
               >Source URL<input
                 type="url"
                 name="source_url"
                 placeholder="https://example.com/source"
-                required
             /></label>
             <label
               >Archive URL <span>optional</span
@@ -187,7 +185,6 @@ The Portland clinic reports a step-free main entrance. English and Spanish are l
                 name="source_note"
                 rows="3"
                 placeholder="Briefly identify the claims supported by this source."
-                required
               ></textarea>
             </label>
           </div>
@@ -202,13 +199,13 @@ The Portland clinic reports a step-free main entrance. English and Spanish are l
             type="text"
             name="edit_summary"
             maxlength="240"
-            placeholder="Example: Updated current practice and added clinic source"
+            placeholder="Example: Updated current practice information"
             required
           />
           <label class="check-label"
             ><input type="checkbox" name="good_faith" required />
             <span
-              >I believe these changes are accurate, appropriately sourced, and do not include
+              >I believe these changes are accurate, and do not include
               private patient information.</span
             ></label
           >

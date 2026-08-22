@@ -344,11 +344,14 @@ def revision(slug: str, number: int, db: Session = Depends(get_db)):
 def proposal(slug: str, payload: ProposalCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
     surgeon = db.scalar(select(Surgeon).where(Surgeon.slug == slug, Surgeon.is_published.is_(True)));
     if not surgeon: raise HTTPException(404, "Surgeon not found")
-    source = Source(url=str(payload.source_url), supports=payload.source_note, submitted_by_id=user.id); db.add(source); db.flush()
     profile = payload.profile.copy()
     profile["procedure_slugs"] = payload.procedure_slugs
     proposal = EditProposal(surgeon_id=surgeon.id, base_revision_id=surgeon.current_revision_id, author_id=user.id, proposed_article_body=payload.proposed_article_body, proposed_snapshot_json=json.dumps(profile), edit_summary=payload.edit_summary, state=ModerationState.pending, submitted_at=datetime.now(timezone.utc))
-    db.add(proposal); db.flush(); db.add(ProposalSource(proposal_id=proposal.id, source_id=source.id)); db.commit(); return {"id": proposal.id, "state": proposal.state}
+    db.add(proposal); db.flush()
+    if payload.source_url:
+        source = Source(url=str(payload.source_url), supports=payload.source_note or None, submitted_by_id=user.id)
+        db.add(source); db.flush(); db.add(ProposalSource(proposal_id=proposal.id, source_id=source.id))
+    db.commit(); return {"id": proposal.id, "state": proposal.state}
 
 
 @router.get("/surgeons/{slug}/talk")

@@ -16,7 +16,7 @@ from app.api import (admin_user, approve_proposal, approve_surgeon, ban_user, co
                      remove_review, reply_to_conversation, request_password_reset, restore_surgeon, send_message,
                      surgeon, surgeon_reviews, surgeons, update_me, update_user_role)
 from app.database import Base, SessionLocal, engine
-from app.models import AuditEvent, EmailOutbox, MediaAsset, ModerationState, Review, ReviewPhoto, ReviewRating, Surgeon, SurgeonRevision, User, UserRole
+from app.models import AuditEvent, EmailOutbox, MediaAsset, ModerationState, ProposalSource, Review, ReviewPhoto, ReviewRating, Surgeon, SurgeonRevision, User, UserRole
 from app.schemas import (AdminAction, AdminRoleUpdate, LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm,
                          PasswordResetRequest, ProposalCreate, ReviewCreate, SettingsUpdate,
                          SurgeonCreate, SurgeonRemoval, TalkPost)
@@ -135,6 +135,20 @@ def test_proposal_approval_updates_revision_and_structured_profile():
         assert detail["specialty"] == "Reconstructive surgeon"
         assert detail["article_body"].startswith("A complete replacement")
         assert [item["slug"] for item in detail["procedures"]] == ["chest-revision"]
+
+
+def test_edit_proposal_can_be_submitted_without_a_source():
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.display_name == "RiverNorth"))
+        result = proposal("adrian-lee", ProposalCreate(
+            proposed_article_body="A complete source-free edit based on accurate community knowledge.",
+            edit_summary="Update information reported by the community",
+            profile={"city": "San Francisco"}, procedure_slugs=["facial-feminization"]
+        ), user, db)
+        assert result["state"] == ModerationState.pending
+        assert db.scalar(select(func.count()).select_from(ProposalSource).where(
+            ProposalSource.proposal_id == result["id"]
+        )) == 0
 
 
 def test_static_frontend_and_api_contracts_are_served_together():

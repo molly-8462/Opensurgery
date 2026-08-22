@@ -418,7 +418,7 @@ document.querySelectorAll(".secondary-button").forEach((button) => {
     if (!sources) return;
     const label = document.createElement("label");
     label.textContent = "Additional source URL";
-    label.innerHTML += '<input type="url" placeholder="https://example.org/source" required>';
+    label.innerHTML += '<input type="url" placeholder="https://example.org/source">';
     button.before(label);
   });
 });
@@ -909,7 +909,7 @@ if (pageName === "edit.html") {
     event.preventDefault(); if (!signedInUser) { form.querySelector(".form-status").textContent = "Log in before submitting a proposal."; return; }
     const selectedProcedures = [...form.elements.sidebar_procedures.selectedOptions].map((option) => option.value);
     const articleSections = ["overview", "practice_description", "procedure_description", "patient_information"].map((name) => form.elements[name]?.value.trim()).filter(Boolean);
-    try { const result = await apiRequest(`/surgeons/${slug}/proposals`, { method: "POST", body: JSON.stringify({ proposed_article_body: articleSections.join("\n\n"), edit_summary: form.elements.edit_summary.value, source_url: form.elements.source_url.value, source_note: form.elements.source_note.value, procedure_slugs: selectedProcedures, profile: { practice: form.elements.sidebar_practice.value, practice_url: form.elements.sidebar_practice_url.value, city: form.elements.city.value, region: form.elements.region.value, country: form.elements.country.value, specialty: form.elements.specialty.value, languages: form.elements.languages.value.split(",").map((item) => item.trim()).filter(Boolean), website_url: form.elements.website.value } }) }); form.querySelector(".form-status").textContent = `Proposal saved with status: ${result.state}.`; }
+    try { const result = await apiRequest(`/surgeons/${slug}/proposals`, { method: "POST", body: JSON.stringify({ proposed_article_body: articleSections.join("\n\n"), edit_summary: form.elements.edit_summary.value, source_url: form.elements.source_url.value || null, source_note: form.elements.source_note.value.trim() || null, procedure_slugs: selectedProcedures, profile: { practice: form.elements.sidebar_practice.value, practice_url: form.elements.sidebar_practice_url.value, city: form.elements.city.value, region: form.elements.region.value, country: form.elements.country.value, specialty: form.elements.specialty.value, languages: form.elements.languages.value.split(",").map((item) => item.trim()).filter(Boolean), website_url: form.elements.website.value } }) }); form.querySelector(".form-status").textContent = `Proposal saved with status: ${result.state}.`; }
     catch (error) { form.querySelector(".form-status").textContent = error.message; }
   });
 }
