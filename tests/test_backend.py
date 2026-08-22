@@ -10,14 +10,14 @@ import json
 import pytest
 from fastapi import HTTPException
 
-from app.api import (approve_proposal, approve_surgeon, confirm_password_reset, conversation_messages,
+from app.api import (admin_user, approve_proposal, approve_surgeon, ban_user, confirm_password_reset, conversation_messages,
                      create_review, create_surgeon, create_talk_topic, history, login,
                      pending_surgeons, procedures, profile, proposal, remove_surgeon,
-                     reply_to_conversation, request_password_reset, restore_surgeon, send_message,
-                     surgeon, surgeon_reviews, surgeons, update_me)
+                     remove_review, reply_to_conversation, request_password_reset, restore_surgeon, send_message,
+                     surgeon, surgeon_reviews, surgeons, update_me, update_user_role)
 from app.database import Base, SessionLocal, engine
-from app.models import EmailOutbox, MediaAsset, Review, ReviewPhoto, ReviewRating, Surgeon, SurgeonRevision, User
-from app.schemas import (LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm,
+from app.models import AuditEvent, EmailOutbox, MediaAsset, ModerationState, Review, ReviewPhoto, ReviewRating, Surgeon, SurgeonRevision, User, UserRole
+from app.schemas import (AdminAction, AdminRoleUpdate, LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm,
                          PasswordResetRequest, ProposalCreate, ReviewCreate, SettingsUpdate,
                          SurgeonCreate, SurgeonRemoval, TalkPost)
 from app.seed import seed
@@ -180,3 +180,47 @@ def test_new_surgeon_moderation_removal_and_restoration_lifecycle():
         restored = restore_surgeon(created["slug"], editor, db)
         assert restored["status"] == "published"
         assert surgeon(created["slug"], db)["name"] == "Taylor Example"
+
+
+def test_admin_user_review_and_surgeon_controls_are_server_authorized_and_audited():
+    with SessionLocal() as db:
+        admin = db.scalar(select(User).where(User.display_name == "JuniperNorth"))
+        member = db.scalar(select(User).where(User.display_name == "RiverNorth"))
+        promotee = db.scalar(select(User).where(User.display_name == "AshAndPine"))
+        banned = db.scalar(select(User).where(User.display_name == "CedarKeys"))
+        review = db.scalar(select(Review).where(Review.state == ModerationState.published))
+
+        assert admin.role == UserRole.admin
+        with pytest.raises(HTTPException) as denied:
+            update_user_role(promotee.display_name, AdminRoleUpdate(role="admin"), member, db)
+        assert denied.value.status_code == 403
+
+        assert update_user_role(promotee.display_name, AdminRoleUpdate(role="admin"), admin, db)["role"] == UserRole.admin
+        assert admin_user(promotee.display_name, admin, db)["role"] == UserRole.admin
+
+        with pytest.raises(HTTPException) as self_ban:
+            ban_user(admin.display_name, AdminAction(reason="Attempted self-ban for regression coverage."), admin, db)
+        assert self_ban.value.status_code == 409
+        assert ban_user(banned.display_name, AdminAction(reason="Repeated abuse confirmed by moderation review."), admin, db)["status"] == "banned"
+        assert not banned.is_active and banned.banned_by_id == admin.id and banned.banned_at
+        with pytest.raises(HTTPException) as banned_login:
+            login(LoginRequest(identity=banned.display_name, password="prototype-password"), Response(), db)
+        assert banned_login.value.status_code == 401
+
+        with pytest.raises(HTTPException) as member_delete:
+            remove_review(review.slug, AdminAction(reason="Unauthorized deletion attempt for testing."), member, db)
+        assert member_delete.value.status_code == 403
+        assert remove_review(review.slug, AdminAction(reason="Review violates the published community policy."), admin, db)["status"] == "removed"
+        assert review.state == ModerationState.hidden
+        assert db.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.action.in_([
+            "user.role_changed", "user.banned", "review.removed"
+        ]))) >= 3
+
+
+def test_admin_controls_are_created_only_after_server_role_confirmation():
+    script = (ASSETS_ROOT / "js" / "script.js").read_text()
+    for page in ("profile.html", "review.html", "index.html"):
+        assert "data-admin-user-controls" not in (PAGES_ROOT / page).read_text()
+    assert 'viewer.role !== "admin"' in script
+    assert 'user.role !== "admin"' in script
+    assert "/admin/users/" in script and "/admin/reviews/" in script

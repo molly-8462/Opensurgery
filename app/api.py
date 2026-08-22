@@ -18,7 +18,7 @@ from .models import (AccountToken, AuditEvent, Conversation, ConversationMember,
                      ModerationState, Practice, Procedure, ProposalSource, RatingDimension, Report, Review, ReviewPhoto, ReviewRating,
                      RevisionKind, RevisionSource, Source, Surgeon,
                      SurgeonPractice, SurgeonRevision, TalkComment, TalkTopic, Technique, User, UserRole, surgeon_procedures)
-from .schemas import (LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm, PasswordResetRequest,
+from .schemas import (AdminAction, AdminRoleUpdate, LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm, PasswordResetRequest,
                       ProposalCreate, RegisterRequest, ReportCreate, ReviewCreate, SettingsUpdate,
                       SurgeonCreate, SurgeonRemoval, TalkPost)
 from .security import create_token, current_user, hash_password, verify_password
@@ -31,6 +31,11 @@ router = APIRouter(prefix="/api/v1")
 def require_editor(user: User) -> None:
     if user.role not in {UserRole.trusted_editor, UserRole.moderator, UserRole.admin}:
         raise HTTPException(403, "Editor role required")
+
+
+def require_admin(user: User) -> None:
+    if user.role != UserRole.admin:
+        raise HTTPException(403, "Administrator role required")
 
 
 @router.get("/health")
@@ -54,7 +59,7 @@ def register(payload: RegisterRequest, response: Response, db: Session = Depends
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     identity = payload.identity.lower()
     user = db.scalar(select(User).where(or_(func.lower(User.email) == identity, func.lower(User.display_name) == identity)))
-    if not user or not verify_password(payload.password, user.password_hash):
+    if not user or not user.is_active or user.deleted_at or not verify_password(payload.password, user.password_hash):
         raise HTTPException(401, "Invalid email or password")
     token = create_token(user); response.set_cookie("opensurgery_session", token, httponly=True, secure=settings.cookie_secure, samesite="strict", max_age=settings.access_token_minutes * 60, path="/")
     return {"user": {"display_name": user.display_name}}
@@ -115,6 +120,43 @@ def export_me(user: User = Depends(current_user), db: Session = Depends(get_db))
 def delete_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
     original_id = user.id; user.email = f"deleted-{user.id}@invalid.local"; user.display_name = f"Deleted-{str(user.id)[:8]}"; user.password_hash = "!deleted"; user.bio = None; user.approximate_region = None; user.allow_messages = False; user.is_active = False; user.deleted_at = datetime.now(timezone.utc)
     db.add(AuditEvent(actor_id=None, action="account.deleted", target_type="user", target_id=original_id)); db.commit()
+
+
+@router.get("/admin/users/{display_name}")
+def admin_user(display_name: str, admin: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_admin(admin)
+    user = db.scalar(select(User).where(func.lower(User.display_name) == display_name.lower()))
+    if not user: raise HTTPException(404, "User not found")
+    return {"id": user.id, "display_name": user.display_name, "role": user.role,
+            "is_active": user.is_active, "banned_at": user.banned_at, "ban_reason": user.ban_reason}
+
+
+@router.patch("/admin/users/{display_name}/role")
+def update_user_role(display_name: str, payload: AdminRoleUpdate, admin: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_admin(admin)
+    user = db.scalar(select(User).where(func.lower(User.display_name) == display_name.lower()))
+    if not user: raise HTTPException(404, "User not found")
+    next_role = UserRole(payload.role)
+    if user.id == admin.id and next_role != UserRole.admin:
+        admin_count = db.scalar(select(func.count()).select_from(User).where(User.role == UserRole.admin, User.is_active.is_(True))) or 0
+        if admin_count <= 1: raise HTTPException(409, "The last active administrator cannot be demoted")
+    previous = user.role; user.role = next_role
+    db.add(AuditEvent(actor_id=admin.id, action="user.role_changed", target_type="user", target_id=user.id,
+                      private_detail=f"{previous.value} -> {next_role.value}"))
+    db.commit(); return {"display_name": user.display_name, "role": user.role}
+
+
+@router.post("/admin/users/{display_name}/ban")
+def ban_user(display_name: str, payload: AdminAction, admin: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_admin(admin)
+    user = db.scalar(select(User).where(func.lower(User.display_name) == display_name.lower()))
+    if not user: raise HTTPException(404, "User not found")
+    if user.id == admin.id: raise HTTPException(409, "Administrators cannot ban their own account")
+    if not user.is_active: raise HTTPException(409, "User is already inactive")
+    user.is_active = False; user.banned_at = datetime.now(timezone.utc); user.banned_by_id = admin.id; user.ban_reason = payload.reason
+    db.add(AuditEvent(actor_id=admin.id, action="user.banned", target_type="user", target_id=user.id,
+                      private_detail=payload.reason))
+    db.commit(); return {"display_name": user.display_name, "status": "banned"}
 
 
 @router.get("/surgeons")
@@ -194,7 +236,7 @@ def approve_surgeon(surgeon_id: uuid.UUID, user: User = Depends(current_user), d
 
 @router.post("/moderation/surgeons/{slug}/remove")
 def remove_surgeon(slug: str, payload: SurgeonRemoval, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    require_editor(user)
+    require_admin(user)
     record = db.scalar(select(Surgeon).where(Surgeon.slug == slug))
     if not record: raise HTTPException(404, "Surgeon not found")
     record.lifecycle_status = payload.status; record.is_published = False
@@ -234,6 +276,18 @@ def surgeon_reviews(slug: str, db: Session = Depends(get_db), limit: int = 25, o
     reviews = db.scalars(select(Review).where(*filters).order_by(Review.published_at.desc()).offset(offset).limit(limit)).all()
     return {"items": [review_data(db, review) for review in reviews], "total": total,
             "limit": limit, "offset": offset, "has_more": offset + len(reviews) < total}
+
+
+@router.post("/admin/reviews/{slug}/remove")
+def remove_review(slug: str, payload: AdminAction, admin: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_admin(admin)
+    record = db.scalar(select(Review).where(Review.slug == slug))
+    if not record: raise HTTPException(404, "Review not found")
+    if record.state == ModerationState.hidden: raise HTTPException(409, "Review is already removed")
+    record.state = ModerationState.hidden
+    db.add(AuditEvent(actor_id=admin.id, action="review.removed", target_type="review", target_id=record.id,
+                      private_detail=payload.reason))
+    db.commit(); return {"slug": record.slug, "status": "removed"}
 
 
 @router.get("/reviews/{slug}")

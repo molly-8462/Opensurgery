@@ -54,6 +54,9 @@ class User(Base):
     email_message_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
     email_watch_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    banned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    banned_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    ban_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

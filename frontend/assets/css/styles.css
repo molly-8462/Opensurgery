@@ -314,6 +314,12 @@ body.drawer-open { overflow: hidden; }
 .profile-contributions > a { display: grid; padding: 13px 0; border-top: 1px solid var(--card-line); }
 .profile-contributions > a > span { color: var(--pink-hover); font-size: 9px; text-transform: uppercase; }
 .profile-contributions small { color: var(--muted); }
+.admin-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; padding: 14px 18px; background: #fff4f4; border: 1px solid #d9a2a2; border-left: 6px solid #9d2f2f; }
+.admin-controls strong { color: #722020; }
+.admin-controls .form-status { flex-basis: 100%; }
+.danger-button { padding: 8px 11px; color: #fff; background: #8c2424; border: 1px solid #721b1b; }
+.danger-button:hover:not(:disabled) { background: #6f1919; }
+.danger-button:disabled { opacity: .55; cursor: not-allowed; }
 dialog { max-width: 530px; width: calc(100% - 30px); padding: 25px; border: 0; border-top: 6px solid var(--pink); box-shadow: 0 12px 45px rgba(0,0,0,.25); }
 dialog::backdrop { background: rgba(12,33,43,.65); }
 dialog form { display: grid; gap: 12px; }

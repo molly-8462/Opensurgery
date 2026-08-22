@@ -39,7 +39,7 @@ def seed(db: Session) -> None:
         return
     users = {}
     for name, email, role, bio, region in [
-        ("JuniperNorth","juniper@example.com","trusted_editor","Researching chest surgeons and contributing sources when I can.","Northern California"),
+        ("JuniperNorth","juniper@example.com","admin","Researching chest surgeons and contributing sources when I can.","Northern California"),
         ("RiverNorth","river@example.com","member","I’ve shared my chest-surgery experience to help people planning travel and recovery.","Pacific Northwest"),
         ("AshAndPine","ash@example.com","member",None,None), ("CedarKeys","cedar@example.com","member",None,None), ("MapleSignal","maple@example.com","member",None,None),
     ]:

@@ -592,6 +592,19 @@ if (pageName === "review.html") {
     if (surgeonLink) { surgeonLink.textContent = review.surgeon.name; surgeonLink.href = surgeonUrl(review.surgeon.slug); }
     const reviewsLink = document.querySelector(".breadcrumb a[href*='reviews.html']"); if (reviewsLink) reviewsLink.href = `reviews.html?surgeon=${encodeURIComponent(review.surgeon.slug)}`;
   });
+  if (slug) apiRequest("/me").then((user) => {
+    if (user.role !== "admin") return;
+    const header = document.querySelector(".review-detail-header");
+    if (!header || header.querySelector("[data-remove-review]")) return;
+    const button = document.createElement("button"); button.type = "button"; button.className = "danger-button"; button.dataset.removeReview = ""; button.textContent = "Delete review";
+    header.append(button);
+    button.addEventListener("click", async () => {
+      const reason = window.prompt("Reason for deleting this review:");
+      if (!reason || reason.trim().length < 10) return;
+      try { await apiRequest(`/admin/reviews/${encodeURIComponent(slug)}/remove`, { method: "POST", body: JSON.stringify({ reason: reason.trim() }) }); window.location.href = "directory.html"; }
+      catch (error) { window.alert(error.message); }
+    });
+  }).catch(() => {});
 }
 
 if (pageName === "history.html") {
@@ -665,6 +678,28 @@ if (pageName === "profile.html") {
     document.querySelectorAll("[data-profile-initial]").forEach((node) => { node.textContent = profile.display_name[0]; });
     const bio = document.querySelector(".profile-about > p"); if (bio) bio.textContent = profile.bio || "This member has not added a bio.";
   });
+  if (user) apiRequest("/me").then((viewer) => {
+    if (viewer.role !== "admin") return;
+    return apiRequest(`/admin/users/${encodeURIComponent(user)}`).then((target) => {
+      const header = document.querySelector(".profile-header");
+      if (!header || header.querySelector("[data-admin-user-controls]")) return;
+      const controls = document.createElement("section"); controls.className = "admin-controls"; controls.dataset.adminUserControls = "";
+      controls.innerHTML = `<strong>Administrator controls</strong><span>Role: ${escapeHtml(target.role)}</span><button type="button" data-admin-role>${target.role === "admin" ? "Remove admin role" : "Make administrator"}</button><button type="button" class="danger-button" data-admin-ban${target.id === viewer.id || !target.is_active ? " disabled" : ""}>${target.is_active ? "Ban user" : "User banned"}</button><small class="form-status" aria-live="polite"></small>`;
+      header.insertAdjacentElement("afterend", controls);
+      controls.querySelector("[data-admin-role]").addEventListener("click", async (event) => {
+        const role = target.role === "admin" ? "member" : "admin";
+        if (!window.confirm(`${role === "admin" ? "Grant administrator access to" : "Remove administrator access from"} ${target.display_name}?`)) return;
+        try { const result = await apiRequest(`/admin/users/${encodeURIComponent(target.display_name)}/role`, { method: "PATCH", body: JSON.stringify({ role }) }); target.role = result.role; event.currentTarget.textContent = target.role === "admin" ? "Remove admin role" : "Make administrator"; controls.querySelector("span").textContent = `Role: ${target.role}`; controls.querySelector(".form-status").textContent = "Role updated."; }
+        catch (error) { controls.querySelector(".form-status").textContent = error.message; }
+      });
+      controls.querySelector("[data-admin-ban]").addEventListener("click", async (event) => {
+        const reason = window.prompt(`Reason for banning ${target.display_name}:`);
+        if (!reason || reason.trim().length < 10) return;
+        try { await apiRequest(`/admin/users/${encodeURIComponent(target.display_name)}/ban`, { method: "POST", body: JSON.stringify({ reason: reason.trim() }) }); event.currentTarget.textContent = "User banned"; event.currentTarget.disabled = true; controls.querySelector(".form-status").textContent = "The account can no longer sign in."; }
+        catch (error) { controls.querySelector(".form-status").textContent = error.message; }
+      });
+    });
+  }).catch(() => {});
 }
 
 if (pageName === "practice.html") {
@@ -774,12 +809,12 @@ if (pageName === "add-surgeon.html") {
 
 if (["index.html", "surgeon.html"].includes(pageName)) {
   apiRequest("/me").then((user) => {
-    if (!["trusted_editor", "moderator", "admin"].includes(user.role)) return;
+    if (user.role !== "admin") return;
     const slug = selectedSurgeonSlug();
     if (!slug) return;
     const container = document.querySelector(".article-navigation nav:last-child, .dynamic-surgeon__content aside");
     if (!container || container.querySelector("[data-remove-surgeon]")) return;
-    const button = document.createElement("button"); button.type = "button"; button.dataset.removeSurgeon = ""; button.textContent = "Remove profile";
+    const button = document.createElement("button"); button.type = "button"; button.className = "danger-button"; button.dataset.removeSurgeon = ""; button.textContent = "Delete surgeon page";
     container.append(button);
     button.addEventListener("click", async () => {
       const reason = window.prompt("Why should this profile be removed? This will be recorded in the audit log.");

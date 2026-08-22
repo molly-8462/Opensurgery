@@ -77,6 +77,14 @@ class SurgeonRemoval(BaseModel):
     status: str = Field(default="removed", pattern=r"^(removed|retired)$")
 
 
+class AdminAction(BaseModel):
+    reason: str = Field(min_length=10, max_length=2000)
+
+
+class AdminRoleUpdate(BaseModel):
+    role: str = Field(pattern=r"^(member|trusted_editor|moderator|admin)$")
+
+
 class MessageCreate(BaseModel):
     recipient: str = Field(min_length=3, max_length=30)
     body: str = Field(min_length=1, max_length=10000)
