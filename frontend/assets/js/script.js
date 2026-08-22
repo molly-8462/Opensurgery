@@ -256,7 +256,7 @@ if (surgeonPage) {
   apiRequest(`/surgeons/${encodeURIComponent(slug)}`).then((record) => {
     const values = { "[data-surgeon-name]": record.name, "[data-surgeon-initials]": record.initials, "[data-surgeon-country]": record.country, "[data-surgeon-detail]": `${record.specialty} · ${[record.city, record.region, record.country].filter(Boolean).join(", ")}`, "[data-surgeon-procedure]": record.procedures.map((x) => x.name).join(", "), "[data-surgeon-reviews]": record.review_count, "[data-surgeon-overview]": record.article_body };
     Object.entries(values).forEach(([selector, value]) => { const node = document.querySelector(selector); if (node) node.textContent = value; });
-    document.querySelectorAll("[data-surgeon-link]").forEach((link) => { link.href = `surgeon.html?surgeon=${record.slug}`; });
+    document.querySelectorAll("[data-surgeon-link]").forEach((link) => { link.href = `index.html?surgeon=${record.slug}`; });
     document.querySelectorAll("[data-surgeon-reviews-link]").forEach((link) => { link.href = `reviews.html?surgeon=${record.slug}`; });
     document.querySelectorAll("[data-surgeon-talk-link]").forEach((link) => { link.href = `talk.html?surgeon=${record.slug}`; });
     document.title = `${record.name} — OpenSurgery`;
@@ -427,14 +427,14 @@ const renderSurgeonCards = (container, surgeons, directoryRows = false) => {
   container.innerHTML = surgeons.map((surgeon) => directoryRows ? `
     <article data-name="${escapeHtml(surgeon.name)}" data-country="${escapeHtml(surgeon.country)}">
       <div class="directory-avatar">${escapeHtml(surgeon.initials)}</div><div>
-        <h2><a href="surgeon.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h2>
+        <h2><a href="index.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h2>
         <p>${escapeHtml(surgeon.specialty)} · ${escapeHtml([surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", "))}</p>
         <ul>${surgeon.procedures.map((procedure) => `<li>${escapeHtml(procedure.name)}</li>`).join("")}</ul>
         <span>${surgeon.review_count} published review${surgeon.review_count === 1 ? "" : "s"}</span>
-      </div><a class="row-action" href="surgeon.html?surgeon=${encodeURIComponent(surgeon.slug)}">View profile →</a>
+      </div><a class="row-action" href="index.html?surgeon=${encodeURIComponent(surgeon.slug)}">View profile →</a>
     </article>` : `
     <article class="surgeon-card"><div class="surgeon-card__initials">${escapeHtml(surgeon.initials)}</div><div>
-      <h3><a href="surgeon.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h3>
+      <h3><a href="index.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></h3>
       <p>${escapeHtml([surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", "))}</p>
       <div class="surgeon-card__meta"><span>${escapeHtml(surgeon.procedures[0]?.name || "Profile")}</span><span>${surgeon.review_count} reviews</span></div>
     </div></article>`).join("");
@@ -450,28 +450,46 @@ if (pageName === "index.html") {
   apiRequest(`/surgeons/${encodeURIComponent(slug)}`).then((surgeon) => {
     document.title = `${surgeon.name} — OpenSurgery`;
     const title = document.querySelector(".article-header h1"); if (title) title.textContent = surgeon.name;
-    const subtitle = document.querySelector(".article-header .subtitle"); if (subtitle) subtitle.textContent = `Fictional ${surgeon.specialty || "surgeon"}`;
-    document.querySelectorAll(".article-navigation a").forEach((link) => {
+    const subtitle = document.querySelector(".article-header .subtitle"); if (subtitle) subtitle.textContent = `${surgeon.specialty || "Surgeon"} · ${[surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", ")}`;
+    document.querySelectorAll(".article-navigation a, .edit-section, .portrait-placeholder, .article-footer a[href*='history.html']").forEach((link) => {
+      if (link.href.includes("index.html")) link.href = `index.html?surgeon=${encodeURIComponent(slug)}`;
       if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
       if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
       if (link.href.includes("edit.html")) link.href = `edit.html?surgeon=${encodeURIComponent(slug)}`;
       if (link.href.includes("history.html")) link.href = `history.html?surgeon=${encodeURIComponent(slug)}`;
     });
     const reviewCount = document.querySelector(".article-navigation a[href*='reviews.html'] .count"); if (reviewCount) reviewCount.textContent = surgeon.review_count;
+    const countryLink = document.querySelector(".breadcrumb a[href*='country=']");
+    if (countryLink) { countryLink.textContent = surgeon.country || "Directory"; countryLink.href = `directory.html?country=${encodeURIComponent(surgeon.country || "")}`; }
+    const note = document.querySelector(".prototype-note");
+    if (note) note.innerHTML = `<strong>Community-maintained profile:</strong> Verify current practice information directly with the clinician or practice.`;
     const infobox = document.querySelector(".infobox");
     if (infobox) {
       infobox.querySelector("header strong").textContent = surgeon.name;
       infobox.querySelector("header small").textContent = surgeon.specialty || "Specialty not listed";
+      infobox.setAttribute("aria-label", `${surgeon.name} profile summary`);
+      const portrait = infobox.querySelector(".portrait-placeholder span"); if (portrait) portrait.textContent = surgeon.initials;
       const cells = infobox.querySelectorAll("tbody td");
       if (cells[0]) cells[0].textContent = surgeon.profile.practice || "Practice not listed";
       if (cells[1]) cells[1].textContent = [surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", ");
       if (cells[2]) cells[2].textContent = surgeon.specialty || "Not listed";
       if (cells[3]) cells[3].textContent = surgeon.procedures.map((item) => item.name).join(", ") || "Not listed";
       if (cells[4]) cells[4].textContent = (surgeon.profile.languages || []).join(", ") || "Not listed";
+      if (cells[5]) cells[5].innerHTML = surgeon.website_url ? `<a href="${escapeHtml(surgeon.website_url)}" rel="noopener noreferrer">Practice website</a>` : "Not listed";
     }
     const intro = document.querySelector("#intro");
     if (intro) intro.innerHTML = surgeon.article_body.split("\n\n").map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
-  }).catch(() => {});
+    const practice = document.querySelector("#practice");
+    if (practice) practice.innerHTML = `<h2>Practice <a class="edit-section" href="edit.html?surgeon=${encodeURIComponent(slug)}#edit-practice">edit</a></h2><p>${escapeHtml(surgeon.profile.practice_summary || `${surgeon.name} is associated with ${surgeon.profile.practice || "a practice that is not yet listed"}.`)}</p>`;
+    const procedures = document.querySelector("#procedures");
+    if (procedures) procedures.innerHTML = `<h2>Procedures and techniques <a class="edit-section" href="edit.html?surgeon=${encodeURIComponent(slug)}#edit-procedures">edit</a></h2><p>These procedures are linked to this community-maintained profile. Availability and technique should be confirmed directly with the practice.</p>${surgeon.procedures.length ? surgeon.procedures.map((item) => `<h3>${escapeHtml(item.name)}</h3>`).join("") : "<p>No procedures are currently listed.</p>"}`;
+    const patientInfo = document.querySelector("#patient-information");
+    if (patientInfo) patientInfo.innerHTML = `<h2>Patient information <a class="edit-section" href="edit.html?surgeon=${encodeURIComponent(slug)}#edit-patient-information">edit</a></h2><p>Community members have published <a href="reviews.html?surgeon=${encodeURIComponent(slug)}"><strong>${surgeon.review_count} review${surgeon.review_count === 1 ? "" : "s"} of ${escapeHtml(surgeon.name)}</strong></a>. Reviews are first-person accounts and are maintained separately from this article.</p><div class="review-callout"><div><strong>Have experience with this surgeon?</strong><span>Your review can help others understand the consultation and recovery process.</span></div><a href="write-review.html?surgeon=${encodeURIComponent(slug)}">Write a review</a></div>`;
+    const references = document.querySelector("#references");
+    if (references) references.innerHTML = `<h2>References</h2><p>Sources are stored with the profile's revision and proposal history. <a href="history.html?surgeon=${encodeURIComponent(slug)}">View edit history</a>.</p>`;
+    const external = document.querySelector("#external-links");
+    if (external) external.innerHTML = `<h2>External links</h2>${surgeon.website_url ? `<ul><li><a href="${escapeHtml(surgeon.website_url)}" rel="noopener noreferrer">Practice website</a></li></ul>` : "<p>No external website is currently listed.</p>"}`;
+  }).catch((error) => { const intro = document.querySelector("#intro"); if (intro) intro.textContent = error.message; });
 }
 
 if (pageName === "directory.html") {
@@ -492,7 +510,17 @@ if (pageName === "directory.html") {
 if (pageName === "reviews.html") {
   const slug = queryParams.get("surgeon") || "mara-voss";
   Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/reviews`)]).then(([surgeon, data]) => {
+    document.title = `Reviews of ${surgeon.name} — OpenSurgery`;
     document.querySelectorAll(".title-row h1").forEach((node) => { node.textContent = surgeon.name; });
+    const subtitle = document.querySelector(".article-header .subtitle"); if (subtitle) subtitle.textContent = `${surgeon.specialty || "Surgeon"} · ${[surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", ")}`;
+    document.querySelectorAll(".article-navigation a").forEach((link) => {
+      if (link.href.includes("index.html")) link.href = `index.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("write-review.html")) link.href = `write-review.html?surgeon=${encodeURIComponent(slug)}`;
+    });
+    const sidebarTotal = document.querySelector(".review-sidebar > strong"); if (sidebarTotal) sidebarTotal.textContent = `${data.total} review${data.total === 1 ? "" : "s"}`;
+    const reviewTabCount = document.querySelector(".article-navigation a[href*='reviews.html'] .count"); if (reviewTabCount) reviewTabCount.textContent = data.total;
     document.querySelectorAll(".review-group").forEach((group, index) => {
       if (index) { group.hidden = true; return; }
       const header = group.querySelector(".review-group__header span"); if (header) header.textContent = `${data.total} reviews`;
@@ -508,14 +536,24 @@ if (pageName === "review.html") {
     document.querySelector(".review-detail-header h1").textContent = review.title;
     document.querySelector(".review-detail-header p").innerHTML = `First-person experience by <a href="profile.html?user=${encodeURIComponent(review.reviewer)}">${escapeHtml(review.reviewer)}</a>`;
     document.querySelector(".review-detail-content article").innerHTML = review.narrative.split("\n\n").map((text) => `<p>${escapeHtml(text)}</p>`).join("");
-    document.querySelector(".breadcrumb a:nth-of-type(2)").textContent = review.surgeon.name;
+    const surgeonLink = document.querySelector(".breadcrumb a:nth-of-type(2)");
+    if (surgeonLink) { surgeonLink.textContent = review.surgeon.name; surgeonLink.href = `index.html?surgeon=${encodeURIComponent(review.surgeon.slug)}`; }
+    const reviewsLink = document.querySelector(".breadcrumb a[href*='reviews.html']"); if (reviewsLink) reviewsLink.href = `reviews.html?surgeon=${encodeURIComponent(review.surgeon.slug)}`;
   });
 }
 
 if (pageName === "history.html") {
   const slug = queryParams.get("surgeon") || "mara-voss";
   Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/history`)]).then(([surgeon, data]) => {
+    document.title = `Revision history of ${surgeon.name} — OpenSurgery`;
     document.querySelector(".history-page h1").textContent = `${surgeon.name} revision history`;
+    document.querySelectorAll(".article-navigation a, .breadcrumb a").forEach((link) => {
+      if (link.href.includes("index.html")) link.href = `index.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("edit.html")) link.href = `edit.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("history.html")) link.href = `history.html?surgeon=${encodeURIComponent(slug)}`;
+    });
     const list = document.querySelector("#history-list"); list.innerHTML = data.items.map((revision) => `<article class="revision"><div class="revision-main"><div class="revision-title"><a href="revision.html?surgeon=${encodeURIComponent(slug)}&revision=${revision.revision_number}">${escapeHtml(new Date(revision.published_at).toLocaleString())}</a></div><p>${escapeHtml(revision.summary)}</p><div class="revision-meta"><a href="profile.html?user=${encodeURIComponent(revision.editor)}">${escapeHtml(revision.editor)}</a><span>${escapeHtml(revision.change_type)}</span></div></div><div class="revision-actions"><a href="revision.html?surgeon=${encodeURIComponent(slug)}&revision=${revision.revision_number}">view version</a></div></article>`).join("");
   });
 }
@@ -534,7 +572,16 @@ if (pageName === "revision.html") {
 
 if (pageName === "talk.html") {
   const slug = queryParams.get("surgeon") || "mara-voss";
-  apiRequest(`/surgeons/${slug}/talk`).then((data) => {
+  Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest(`/surgeons/${slug}/talk`)]).then(([surgeon, data]) => {
+    document.title = `Talk: ${surgeon.name} — OpenSurgery`;
+    const title = document.querySelector(".talk-page .title-row h1"); if (title) title.innerHTML = `<span class="namespace">Talk:</span> ${escapeHtml(surgeon.name)}`;
+    const subtitle = document.querySelector(".talk-page .subtitle"); if (subtitle) subtitle.textContent = `Discussion about improvements to the ${surgeon.name} information page`;
+    const breadcrumbSurgeon = document.querySelector(".talk-page .breadcrumb a:nth-of-type(2)"); if (breadcrumbSurgeon) { breadcrumbSurgeon.textContent = surgeon.name; breadcrumbSurgeon.href = `index.html?surgeon=${encodeURIComponent(slug)}`; }
+    document.querySelectorAll(".article-navigation a").forEach((link) => {
+      if (link.href.includes("index.html")) link.href = `index.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("reviews.html")) link.href = `reviews.html?surgeon=${encodeURIComponent(slug)}`;
+      if (link.href.includes("talk.html")) link.href = `talk.html?surgeon=${encodeURIComponent(slug)}`;
+    });
     const firstTopic = document.querySelector(".talk-topic"); if (!firstTopic) return;
     document.querySelectorAll(".talk-topic:not(#new-topic)").forEach((node) => node.remove());
     const toolbar = document.querySelector(".discussion-toolbar");
@@ -565,13 +612,13 @@ if (pageName === "practice.html") {
   apiRequest("/practices/northbank-reconstructive-center").then((practice) => {
     document.querySelectorAll(".practice-shell h1").forEach((node) => { node.textContent = practice.name; });
     const content = document.querySelector("[data-practice-content]");
-    if (content) content.innerHTML = `<h2>Locations</h2>${practice.locations.map((location) => `<p><strong>${escapeHtml([location.city, location.region].filter(Boolean).join(", "))}</strong><br>${escapeHtml(location.accessibility || "Accessibility information not listed.")}</p>`).join("")}<h2>Linked surgeons</h2>${practice.surgeons.map((surgeon) => `<p><a href="surgeon.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></p>`).join("")}`;
+    if (content) content.innerHTML = `<h2>Locations</h2>${practice.locations.map((location) => `<p><strong>${escapeHtml([location.city, location.region].filter(Boolean).join(", "))}</strong><br>${escapeHtml(location.accessibility || "Accessibility information not listed.")}</p>`).join("")}<h2>Linked surgeons</h2>${practice.surgeons.map((surgeon) => `<p><a href="index.html?surgeon=${encodeURIComponent(surgeon.slug)}">${escapeHtml(surgeon.name)}</a></p>`).join("")}`;
   });
 }
 
 if (pageName === "pending.html") {
   apiRequest("/proposals").then((data) => {
-    const list = document.querySelector(".proposal-list"); list.innerHTML = data.items.map((proposal) => `<article><span>${escapeHtml(proposal.state)}</span><h2>${escapeHtml(proposal.summary)}</h2><p><a href="surgeon.html?surgeon=${encodeURIComponent(proposal.surgeon.slug)}">${escapeHtml(proposal.surgeon.name)}</a> · Proposed by ${escapeHtml(proposal.author)}</p></article>`).join("");
+    const list = document.querySelector(".proposal-list"); list.innerHTML = data.items.map((proposal) => `<article><span>${escapeHtml(proposal.state)}</span><h2>${escapeHtml(proposal.summary)}</h2><p><a href="index.html?surgeon=${encodeURIComponent(proposal.surgeon.slug)}">${escapeHtml(proposal.surgeon.name)}</a> · Proposed by ${escapeHtml(proposal.author)}</p></article>`).join("");
     apiRequest("/me").then((user) => {
       if (!["trusted_editor", "moderator", "admin"].includes(user.role)) return;
       apiRequest("/moderation/surgeons").then((submissions) => {
@@ -580,7 +627,7 @@ if (pageName === "pending.html") {
           const article = button.closest("[data-surgeon-submission]");
           try {
             const result = await apiRequest(`/moderation/surgeons/${article.dataset.surgeonSubmission}/approve`, { method: "POST" });
-            article.innerHTML = `<span>Published</span><h2>Profile approved</h2><p><a href="surgeon.html?surgeon=${encodeURIComponent(result.slug)}">Open the published profile</a></p>`;
+            article.innerHTML = `<span>Published</span><h2>Profile approved</h2><p><a href="index.html?surgeon=${encodeURIComponent(result.slug)}">Open the published profile</a></p>`;
           } catch (error) { button.insertAdjacentHTML("afterend", `<p class="form-status">${escapeHtml(error.message)}</p>`); }
         }));
       });
@@ -593,7 +640,7 @@ if (pageName === "search.html") {
   const query = queryParams.get("q") || "";
   Promise.all([apiRequest(`/surgeons?q=${encodeURIComponent(query)}`), apiRequest("/procedures")]).then(([surgeons, procedures]) => {
     const matchingProcedures = procedures.items.filter((item) => !query || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase()));
-    list.innerHTML = surgeons.items.map((item) => `<article><span>Surgeon</span><h2><a href="surgeon.html?surgeon=${encodeURIComponent(item.slug)}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.specialty || "Surgeon profile")}</p></article>`).join("") + matchingProcedures.map((item) => `<article><span>Procedure</span><h2><a href="procedures.html#${encodeURIComponent(item.category.toLowerCase())}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.description)}</p></article>`).join("");
+    list.innerHTML = surgeons.items.map((item) => `<article><span>Surgeon</span><h2><a href="index.html?surgeon=${encodeURIComponent(item.slug)}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.specialty || "Surgeon profile")}</p></article>`).join("") + matchingProcedures.map((item) => `<article><span>Procedure</span><h2><a href="procedures.html#${encodeURIComponent(item.category.toLowerCase())}">${escapeHtml(item.name)}</a></h2><p>${escapeHtml(item.description)}</p></article>`).join("");
     const summary = document.querySelector("[data-search-summary]"); if (summary) summary.textContent = `${surgeons.total + matchingProcedures.length} matching results.`;
   });
 }
@@ -611,6 +658,7 @@ if (pageName === "write-review.html") {
     Promise.all([apiRequest("/surgeons"), apiRequest("/procedures")]).then(([surgeons, procedures]) => {
       procedureRecords = procedures.items;
       selects[0].innerHTML = surgeons.items.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
+      const requestedSurgeon = queryParams.get("surgeon"); if (requestedSurgeon && surgeons.items.some((item) => item.slug === requestedSurgeon)) selects[0].value = requestedSurgeon;
       selects[1].innerHTML = procedures.items.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
       populateTechniques();
     });
@@ -741,14 +789,28 @@ if (pageName === "forgot-password.html") {
 
 if (pageName === "edit.html") {
   const slug = queryParams.get("surgeon") || "mara-voss"; const form = document.querySelector("#edit-form");
-  apiRequest(`/surgeons/${slug}`).then((surgeon) => {
+  Promise.all([apiRequest(`/surgeons/${slug}`), apiRequest("/procedures")]).then(([surgeon, procedures]) => {
+    document.title = `Edit ${surgeon.name} — OpenSurgery`;
     document.querySelector(".edit-page h1").textContent = `Edit ${surgeon.name}`;
     form.elements.overview.value = surgeon.article_body;
-    document.querySelector("[data-edit-profile]").textContent = `${surgeon.specialty || "Specialty not listed"} · ${[surgeon.city, surgeon.region, surgeon.country].filter(Boolean).join(", ")}`;
+    const mobileTitle = document.querySelector(".mobile-editor-title strong"); if (mobileTitle) mobileTitle.textContent = `Edit ${surgeon.name}`;
+    const initials = document.querySelector(".portrait-upload__initials"); if (initials) initials.textContent = surgeon.initials;
+    const values = { sidebar_practice: surgeon.profile.practice || "", sidebar_practice_url: surgeon.profile.practice_url || surgeon.website_url || "", city: surgeon.city || "", region: surgeon.region || "", country: surgeon.country || "", specialty: surgeon.specialty || "", languages: (surgeon.profile.languages || []).join(", "), website: surgeon.website_url || surgeon.profile.website_url || "" };
+    Object.entries(values).forEach(([name, value]) => { if (form.elements[name]) form.elements[name].value = value; });
+    form.elements.practice_description.value = surgeon.profile.practice_summary || "";
+    form.elements.procedure_description.value = "";
+    form.elements.patient_information.value = surgeon.profile.patient_information || "";
+    const selectedSlugs = new Set(surgeon.procedures.map((item) => item.slug));
+    const procedureOptions = procedures.items.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
+    form.elements.procedures.innerHTML = procedureOptions;
+    form.elements.sidebar_procedures.innerHTML = procedureOptions;
+    [form.elements.procedures, form.elements.sidebar_procedures].forEach((select) => [...select.options].forEach((option) => { option.selected = selectedSlugs.has(option.value); }));
+    document.querySelectorAll(".breadcrumb a[href*='index.html'], .article-navigation a[href*='index.html']").forEach((link) => { link.href = `index.html?surgeon=${encodeURIComponent(slug)}`; link.textContent = link.closest(".breadcrumb") ? surgeon.name : "← Return to Info"; });
+    document.querySelectorAll("a[href*='history.html']").forEach((link) => { link.href = `history.html?surgeon=${encodeURIComponent(slug)}`; });
   });
   form?.addEventListener("submit", async (event) => {
     event.preventDefault(); if (!signedInUser) { form.querySelector(".form-status").textContent = "Log in before submitting a proposal."; return; }
-    const selectedProcedures = [...form.elements.sidebar_procedures.selectedOptions].map((option) => option.textContent.toLowerCase().replace(/\bsurgery\b/g, "").trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+    const selectedProcedures = [...form.elements.sidebar_procedures.selectedOptions].map((option) => option.value);
     const articleSections = ["overview", "practice_description", "procedure_description", "patient_information"].map((name) => form.elements[name]?.value.trim()).filter(Boolean);
     try { const result = await apiRequest(`/surgeons/${slug}/proposals`, { method: "POST", body: JSON.stringify({ proposed_article_body: articleSections.join("\n\n"), edit_summary: form.elements.edit_summary.value, source_url: form.elements.source_url.value, source_note: form.elements.source_note.value, procedure_slugs: selectedProcedures, profile: { practice: form.elements.sidebar_practice.value, practice_url: form.elements.sidebar_practice_url.value, city: form.elements.city.value, region: form.elements.region.value, country: form.elements.country.value, specialty: form.elements.specialty.value, languages: form.elements.languages.value.split(",").map((item) => item.trim()).filter(Boolean), website_url: form.elements.website.value } }) }); form.querySelector(".form-status").textContent = `Proposal saved with status: ${result.state}.`; }
     catch (error) { form.querySelector(".form-status").textContent = error.message; }
