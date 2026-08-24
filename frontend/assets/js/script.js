@@ -784,6 +784,7 @@ if (pageName === "add-surgeon.html") {
   const form = document.querySelector("[data-surgeon-create]");
   const procedureChecklist = form?.querySelector("[data-procedure-checklist]");
   if (procedureChecklist) apiRequest("/procedures").then((data) => {
+    if (!Array.isArray(data.items) || !data.items.length) throw new Error("No procedures are currently available.");
     procedureChecklist.innerHTML = data.items.map((item) => `<label><input type="checkbox" name="procedure_slugs" value="${escapeHtml(item.slug)}"><span>${escapeHtml(item.name)}</span><small>${escapeHtml(item.category)}</small></label>`).join("");
   }).catch((error) => { procedureChecklist.textContent = error.message; });
   const countryInput = form?.elements.country_name;

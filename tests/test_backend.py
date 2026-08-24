@@ -171,6 +171,7 @@ def test_add_surgeon_uses_complete_countries_and_checkbox_procedures_without_ali
     assert 'name="aliases"' not in page
     assert 'name="country_name"' in page and 'id="country-options"' in page
     assert "data-procedure-checklist" in page
+    assert 'script.js?v=20260824.1' in page
     assert 'type="checkbox" name="procedure_slugs"' in script
     assert "aliases: data.get" not in script
 
