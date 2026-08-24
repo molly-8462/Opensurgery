@@ -3,11 +3,9 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .countries import COUNTRY_NAMES
 from .models import (ModerationState, Procedure, RatingDimension, Review, ReviewPhoto, ReviewRating,
                      Surgeon, SurgeonRevision, Technique, User)
-
-
-COUNTRIES = {"US": "United States", "CA": "Canada", "GB": "United Kingdom", "TH": "Thailand"}
 
 
 def surgeon_summary(db: Session, surgeon: Surgeon) -> dict:
@@ -20,7 +18,7 @@ def surgeon_summary(db: Session, surgeon: Surgeon) -> dict:
     return {
         "slug": surgeon.slug, "name": surgeon.display_name, "initials": "".join(x[0] for x in surgeon.display_name.split()[:2]),
         "specialty": surgeon.specialty, "city": surgeon.city, "region": surgeon.region,
-        "country_code": surgeon.country_code, "country": COUNTRIES.get(surgeon.country_code, surgeon.country_code),
+        "country_code": surgeon.country_code, "country": COUNTRY_NAMES.get(surgeon.country_code, surgeon.country_code),
         "website_url": surgeon.website_url, "review_count": review_count,
         "procedures": [{"slug": p.slug, "name": p.name} for p in procedures],
         "updated_at": surgeon.updated_at.isoformat(),
@@ -31,7 +29,7 @@ def surgeon_detail(db: Session, surgeon: Surgeon) -> dict:
     data = surgeon_summary(db, surgeon)
     revision = db.get(SurgeonRevision, surgeon.current_revision_id) if surgeon.current_revision_id else None
     snapshot = json.loads(revision.snapshot_json) if revision else {}
-    data.update({"aliases": surgeon.aliases.split("|") if surgeon.aliases else [], "article_body": revision.article_body if revision else "", "profile": snapshot, "revision_number": revision.revision_number if revision else None})
+    data.update({"article_body": revision.article_body if revision else "", "profile": snapshot, "revision_number": revision.revision_number if revision else None})
     return data
 
 

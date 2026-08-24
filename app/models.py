@@ -91,7 +91,6 @@ class Surgeon(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     slug: Mapped[str] = mapped_column(String(120), unique=True, index=True)
     display_name: Mapped[str] = mapped_column(String(240), index=True)
-    aliases: Mapped[str | None] = mapped_column(Text)
     specialty: Mapped[str | None] = mapped_column(String(240))
     country_code: Mapped[str] = mapped_column(String(2), index=True)
     region: Mapped[str | None] = mapped_column(String(120))

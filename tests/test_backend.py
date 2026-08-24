@@ -10,7 +10,7 @@ import json
 import pytest
 from fastapi import HTTPException
 
-from app.api import (admin_user, approve_proposal, approve_surgeon, ban_user, confirm_password_reset, conversation_messages,
+from app.api import (admin_user, approve_proposal, approve_surgeon, ban_user, confirm_password_reset, conversation_messages, countries,
                      create_review, create_surgeon, create_talk_topic, history, login,
                      pending_surgeons, procedures, profile, proposal, remove_surgeon,
                      remove_review, reply_to_conversation, request_password_reset, restore_surgeon, send_message,
@@ -160,6 +160,19 @@ def test_static_frontend_and_api_contracts_are_served_together():
     with SessionLocal() as db:
         chest = next(item for item in procedures(db)["items"] if item["slug"] == "chest-masculinization")
         assert {item["slug"] for item in chest["techniques"]} == {"double-incision", "periareolar", "buttonhole"}
+
+
+def test_add_surgeon_uses_complete_countries_and_checkbox_procedures_without_aliases():
+    page = (PAGES_ROOT / "add-surgeon.html").read_text()
+    script = (ASSETS_ROOT / "js" / "script.js").read_text()
+    country_items = countries()["items"]
+    assert len(country_items) >= 240
+    assert {"US", "CA", "GB", "TH", "DE", "ZA", "JP"} <= {item["code"] for item in country_items}
+    assert 'name="aliases"' not in page
+    assert 'name="country_name"' in page and 'id="country-options"' in page
+    assert "data-procedure-checklist" in page
+    assert 'type="checkbox" name="procedure_slugs"' in script
+    assert "aliases: data.get" not in script
 
 
 def test_new_surgeon_moderation_removal_and_restoration_lifecycle():

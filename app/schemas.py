@@ -59,7 +59,6 @@ class ProposalCreate(BaseModel):
 
 class SurgeonCreate(BaseModel):
     display_name: str = Field(min_length=3, max_length=240)
-    aliases: str | None = Field(default=None, max_length=1000)
     specialty: str = Field(min_length=3, max_length=240)
     city: str = Field(min_length=2, max_length=120)
     region: str | None = Field(default=None, max_length=120)

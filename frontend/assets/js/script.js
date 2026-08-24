@@ -782,17 +782,40 @@ if (pageName === "write-review.html") {
 
 if (pageName === "add-surgeon.html") {
   const form = document.querySelector("[data-surgeon-create]");
-  const procedureSelect = form?.elements.procedure_slugs;
-  if (procedureSelect) apiRequest("/procedures").then((data) => {
-    procedureSelect.innerHTML = data.items.map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("");
-  }).catch((error) => { form.querySelector(".form-status").textContent = error.message; });
+  const procedureChecklist = form?.querySelector("[data-procedure-checklist]");
+  if (procedureChecklist) apiRequest("/procedures").then((data) => {
+    procedureChecklist.innerHTML = data.items.map((item) => `<label><input type="checkbox" name="procedure_slugs" value="${escapeHtml(item.slug)}"><span>${escapeHtml(item.name)}</span><small>${escapeHtml(item.category)}</small></label>`).join("");
+  }).catch((error) => { procedureChecklist.textContent = error.message; });
+  const countryInput = form?.elements.country_name;
+  const countryCode = form?.elements.country_code;
+  const countryOptions = document.querySelector("#country-options");
+  let countriesByName = new Map();
+  let selectCountry = () => {};
+  if (countryInput && countryCode && countryOptions) apiRequest("/countries").then((data) => {
+    countriesByName = new Map(data.items.map((country) => [country.name.toLocaleLowerCase(), country]));
+    countryOptions.innerHTML = data.items.map((country) => `<option value="${escapeHtml(country.name)}">${escapeHtml(country.code)}</option>`).join("");
+    selectCountry = () => {
+      const selected = countriesByName.get(countryInput.value.trim().toLocaleLowerCase());
+      countryCode.value = selected?.code || "";
+      countryInput.setCustomValidity(selected ? "" : "Choose a country from the matching list.");
+    };
+    countryInput.addEventListener("input", selectCountry);
+    countryInput.addEventListener("change", selectCountry);
+    selectCountry();
+  }).catch((error) => { countryInput.setCustomValidity(error.message); });
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    selectCountry();
+    if (!form.querySelector("[name='procedure_slugs']:checked")) {
+      form.querySelector(".form-status").textContent = "Select at least one procedure offered.";
+      procedureChecklist?.focus();
+      return;
+    }
     if (!form.reportValidity()) return;
     if (!signedInUser) { form.querySelector(".form-status").innerHTML = '<a href="login.html">Log in</a> before submitting a surgeon.'; return; }
     const data = new FormData(form);
     const payload = {
-      display_name: data.get("display_name"), aliases: data.get("aliases") || null,
+      display_name: data.get("display_name"),
       specialty: data.get("specialty"), city: data.get("city"), region: data.get("region") || null,
       country_code: data.get("country_code"), website_url: data.get("website_url") || null,
       practice_name: data.get("practice_name") || null, article_body: data.get("article_body"),

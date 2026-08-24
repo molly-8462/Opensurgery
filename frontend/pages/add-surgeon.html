@@ -25,23 +25,25 @@
           <h2>Identity and location</h2>
           <div class="field-grid field-grid--two">
             <label>Full professional name<input name="display_name" type="text" maxlength="240" required /></label>
-            <label>Aliases <span class="optional-label">optional</span><input name="aliases" type="text" maxlength="1000" /></label>
             <label>Specialty<input name="specialty" type="text" maxlength="240" required /></label>
             <label>Practice name <span class="optional-label">optional</span><input name="practice_name" type="text" maxlength="240" /></label>
             <label>City<input name="city" type="text" maxlength="120" required /></label>
             <label>State or region <span class="optional-label">optional</span><input name="region" type="text" maxlength="120" /></label>
             <label>Country
-              <select name="country_code" required>
-                <option value="">Choose a country</option><option value="US">United States</option><option value="CA">Canada</option>
-                <option value="GB">United Kingdom</option><option value="TH">Thailand</option>
-              </select>
+              <input name="country_name" type="text" list="country-options" autocomplete="off" placeholder="Begin typing a country" required />
+              <input name="country_code" type="hidden" />
+              <datalist id="country-options"></datalist>
             </label>
             <label>Official website <span class="optional-label">optional</span><input name="website_url" type="url" /></label>
           </div>
         </section>
         <section>
           <h2>Procedures and profile</h2>
-          <label>Procedures offered<select name="procedure_slugs" multiple size="7" required><option>Loading procedures…</option></select></label>
+          <fieldset class="procedure-picker">
+            <legend>Procedures offered</legend>
+            <p class="field-help">Select every procedure currently offered.</p>
+            <div class="procedure-checklist" data-procedure-checklist aria-live="polite" tabindex="-1">Loading procedures…</div>
+          </fieldset>
           <label>Neutral overview<textarea name="article_body" rows="9" minlength="20" maxlength="100000" required placeholder="Summarize publicly verifiable information without promotional claims."></textarea></label>
         </section>
         <section>

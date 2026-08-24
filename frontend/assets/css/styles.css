@@ -379,6 +379,15 @@ dialog input, dialog textarea { width: 100%; margin-top: 4px; }
 .review-form section:nth-child(even) { border-left-color: var(--pink); }
 .review-form h2 { margin-top: 0; color: var(--navy-deep); }
 .review-form label { display: block; margin-top: 13px; }
+.procedure-picker { margin: 0 0 18px; padding: 0; border: 0; }
+.procedure-picker legend { color: var(--navy); font-size: 11px; font-weight: 750; }
+.procedure-picker .field-help { margin: 3px 0 10px; }
+.procedure-checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; background: var(--soft); border: 1px solid var(--card-line); }
+.procedure-checklist > label { display: grid; grid-template-columns: auto 1fr; column-gap: 9px; align-items: center; margin: 0; padding: 10px 12px; background: #fff; border: 1px solid var(--card-line); cursor: pointer; }
+.procedure-checklist input { grid-row: 1 / span 2; width: auto; margin: 0; }
+.procedure-checklist span { color: var(--ink); font-size: 12px; }
+.procedure-checklist small { color: var(--muted); font-size: 9px; text-transform: capitalize; }
+.procedure-checklist > label:has(input:checked) { background: var(--blue-wash); border-color: #5d98aa; }
 .optional-label { color: var(--muted); font-weight: 400; }
 .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .upload-grid label { padding: 20px; background: var(--blue-wash); border: 2px dashed #8bb5c3; }

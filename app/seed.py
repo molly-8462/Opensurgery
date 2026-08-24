@@ -12,14 +12,14 @@ from .security import hash_password
 
 
 SURGEONS = [
-    dict(slug="mara-voss", display_name="Mara Voss", specialty="Plastic and reconstructive surgeon", country_code="US", region="Oregon", city="Portland", aliases=None,
+    dict(slug="mara-voss", display_name="Mara Voss", specialty="Plastic and reconstructive surgeon", country_code="US", region="Oregon", city="Portland",
          article="Mara Voss is a fictional American plastic and reconstructive surgeon based in Portland, Oregon. Her listed practice focuses on gender-affirming chest surgery and related revisions.",
          profile={"practice":"Northbank Reconstructive Center","languages":["English","Spanish"],"accessibility":"The Portland clinic reports a step-free main entrance.","practice_summary":"Public information describes a focus on gender-affirming and reconstructive care, with virtual intake before an in-person consultation.","patient_information":"Availability, insurance participation, and consultation requirements should be confirmed with the practice."}),
-    dict(slug="adrian-lee", display_name="Adrian Lee", specialty="Craniofacial surgeon", country_code="CA", region="Ontario", city="Toronto", aliases=None,
+    dict(slug="adrian-lee", display_name="Adrian Lee", specialty="Craniofacial surgeon", country_code="CA", region="Ontario", city="Toronto",
          article="Adrian Lee is a fictional craniofacial surgeon included to demonstrate a directory profile.", profile={"practice":"Example Craniofacial Centre","languages":["English"],"practice_summary":"Demonstration record."}),
-    dict(slug="samira-khan", display_name="Samira Khan", specialty="Plastic surgeon", country_code="GB", region="Greater Manchester", city="Manchester", aliases=None,
+    dict(slug="samira-khan", display_name="Samira Khan", specialty="Plastic surgeon", country_code="GB", region="Greater Manchester", city="Manchester",
          article="Samira Khan is a fictional plastic surgeon included to demonstrate a directory profile.", profile={"practice":"Example Manchester Practice","languages":["English"],"practice_summary":"Demonstration record."}),
-    dict(slug="narin-chai", display_name="Narin Chai", specialty="Gender-affirming surgeon", country_code="TH", region=None, city="Bangkok", aliases=None,
+    dict(slug="narin-chai", display_name="Narin Chai", specialty="Gender-affirming surgeon", country_code="TH", region=None, city="Bangkok",
          article="Narin Chai is a fictional gender-affirming surgeon included to demonstrate a directory profile.", profile={"practice":"Example Bangkok Practice","languages":["Thai","English"],"practice_summary":"Demonstration record."}),
 ]
 

@@ -26,7 +26,7 @@ The site should help people compare information; it must not present itself as m
 
 ### Surgeon
 
-- Name and aliases
+- Professional name
 - Practice names and locations, with effective dates
 - Country and region
 - Website and public contact details

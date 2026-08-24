@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from .config import settings
+from .countries import COUNTRIES, country_code
 from .models import (AccountToken, AuditEvent, Conversation, ConversationMember, EditProposal, EmailOutbox, Location, MediaAsset, Message,
                      ModerationState, Practice, Procedure, ProposalSource, RatingDimension, Report, Review, ReviewPhoto, ReviewRating,
                      RevisionKind, RevisionSource, Source, Surgeon,
@@ -163,7 +164,10 @@ def ban_user(display_name: str, payload: AdminAction, admin: User = Depends(curr
 def surgeons(q: str | None = None, country: str | None = None, procedure: str | None = None, db: Session = Depends(get_db)):
     stmt = select(Surgeon).where(Surgeon.is_published.is_(True)).order_by(Surgeon.updated_at.desc())
     if q: stmt = stmt.where(or_(Surgeon.display_name.ilike(f"%{q}%"), Surgeon.city.ilike(f"%{q}%"), Surgeon.region.ilike(f"%{q}%")))
-    if country: stmt = stmt.where(or_(Surgeon.country_code == country.upper(), Surgeon.country_code == {"United States":"US","Canada":"CA","United Kingdom":"GB","Thailand":"TH"}.get(country)))
+    if country:
+        selected_country = country_code(country)
+        if not selected_country: return {"items": [], "total": 0}
+        stmt = stmt.where(Surgeon.country_code == selected_country)
     records = db.scalars(stmt).all()
     result = [surgeon_summary(db, record) for record in records]
     if procedure: result = [x for x in result if any(p["slug"] == procedure or p["name"] == procedure for p in x["procedures"])]
@@ -183,10 +187,12 @@ def create_surgeon(payload: SurgeonCreate, user: User = Depends(current_user), d
         raise HTTPException(400, "One or more procedures are unknown")
     source = Source(url=str(payload.source_url), supports=payload.source_note, submitted_by_id=user.id)
     db.add(source); db.flush()
-    record = Surgeon(slug=slug, display_name=payload.display_name.strip(), aliases=payload.aliases,
+    selected_country = country_code(payload.country_code)
+    if not selected_country: raise HTTPException(400, "Unknown country code")
+    record = Surgeon(slug=slug, display_name=payload.display_name.strip(),
                      specialty=payload.specialty.strip(), city=payload.city.strip(),
                      region=payload.region.strip() if payload.region else None,
-                     country_code=payload.country_code.upper(),
+                     country_code=selected_country,
                      website_url=str(payload.website_url) if payload.website_url else None,
                      is_published=False, lifecycle_status="pending", submitted_by_id=user.id)
     db.add(record); db.flush()
@@ -381,6 +387,11 @@ def procedures(db: Session = Depends(get_db)):
                         ).all()]} for p in rows]}
 
 
+@router.get("/countries")
+def countries():
+    return {"items": COUNTRIES}
+
+
 @router.get("/practices/{slug}")
 def practice(slug: str, db: Session = Depends(get_db)):
     record = db.scalar(select(Practice).where(Practice.slug == slug))
@@ -484,7 +495,9 @@ def approve_proposal(proposal_id: uuid.UUID, user: User = Depends(current_user),
         if key in snapshot: setattr(surgeon, key, snapshot[key] or None)
     country = snapshot.get("country")
     if country:
-        surgeon.country_code = {"United States": "US", "Canada": "CA", "United Kingdom": "GB", "Thailand": "TH"}.get(country, country.upper()[:2])
+        selected_country = country_code(country)
+        if not selected_country: raise HTTPException(400, "Proposal contains an unknown country")
+        surgeon.country_code = selected_country
     procedure_slugs = snapshot.get("procedure_slugs")
     if procedure_slugs:
         selected = db.scalars(select(Procedure).where(Procedure.slug.in_(procedure_slugs))).all()
