@@ -1,6 +1,6 @@
-# OpenSurgery
+# SurgeonSite backend
 
-OpenSurgery is a FastAPI and PostgreSQL application for community-maintained surgeon profiles,
+This is a FastAPI and PostgreSQL application for community-maintained surgeon profiles,
 revision history, structured patient reviews, discussions, and private member messaging.
 
 ## Repository layout
@@ -73,12 +73,13 @@ private `.env` file:
 
 ```dotenv
 SMTP_PASSWORD=re_your_resend_api_key
-SMTP_FROM_ADDRESS=OpenSurgery <no-reply@your-domain.com>
+SMTP_FROM_ADDRESS=no-reply@your-domain.com
 ```
 
 The checked-in defaults use `smtp.resend.com`, port `587`, username `resend`, and STARTTLS. Never
 commit the real API key. Reset links expire after one hour, are single-use, and revoke existing
-sessions when used.
+sessions when used. User-visible backend branding is controlled by the single `site_name` setting
+in `app/config.py`; it can also be overridden with the `SITE_NAME` environment variable.
 
 Run the test suite with:
 

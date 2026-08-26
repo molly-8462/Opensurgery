@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # Change this one value to update user-visible backend branding everywhere.
+    site_name: str = "transdoc.wiki"
     database_url: str = "postgresql+psycopg://opensurgery:opensurgery@localhost:5432/opensurgery"
     secret_key: str = "development-only-change-me-before-deployment"
     access_token_minutes: int = 30
@@ -14,7 +16,7 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_username: str = "resend"
     smtp_password: str | None = None
-    smtp_from_address: str = "no-reply@opensurgery.local"
+    smtp_from_address: str | None = None
     smtp_starttls: bool = True
     smtp_use_ssl: bool = False
     smtp_timeout_seconds: int = 10

@@ -1,4 +1,4 @@
-# OpenSurgery backend
+# Backend
 
 The repository structure and quick-start commands are summarized in the root `README.md`. Frontend
 pages are stored in `frontend/pages`, and browser assets are stored in `frontend/assets` while

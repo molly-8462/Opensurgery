@@ -26,13 +26,13 @@ def deliver_password_reset(db: Session, outbox_id) -> bool:
 
     reset_url = json.loads(outbox.payload_json)["reset_url"]
     message = EmailMessage()
-    message["Subject"] = "Reset your OpenSurgery password"
-    message["From"] = settings.smtp_from_address
+    message["Subject"] = f"Reset your {settings.site_name} password"
+    message["From"] = settings.smtp_from_address or f"no-reply@{settings.site_name}"
     message["To"] = user.email
     # Resend uses this header to suppress duplicates if a pending outbox row is retried.
     message["Resend-Idempotency-Key"] = f"password-reset/{outbox.id}"
     message.set_content(
-        "We received a request to reset your OpenSurgery password.\n\n"
+        f"We received a request to reset your {settings.site_name} password.\n\n"
         f"Choose a new password within one hour:\n{reset_url}\n\n"
         "If you did not request this, you can ignore this email."
     )

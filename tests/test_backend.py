@@ -23,7 +23,8 @@ from app.schemas import (AdminAction, AdminRoleUpdate, LoginRequest, MessageCrea
                          SurgeonCreate, SurgeonRemoval, TalkPost)
 from app.seed import seed
 from app.security import create_token, current_user, verify_password
-from app.main import ASSETS_ROOT, PAGES_ROOT, PUBLIC_PAGES, surgeon_profile_page, surgeon_section_page
+from app.config import settings
+from app.main import ASSETS_ROOT, PAGES_ROOT, PUBLIC_PAGES, app, surgeon_profile_page, surgeon_section_page
 
 
 def setup_module():
@@ -48,6 +49,11 @@ def test_seeded_relations_and_public_queries():
         assert len(history("mara-voss", db)["items"]) == 6
         assert len(procedures(db)["items"]) == 7
         assert db.scalar(select(func.count()).select_from(ReviewRating)) == 3
+
+
+def test_backend_branding_comes_from_the_site_name_setting():
+    assert settings.site_name == "transdoc.wiki"
+    assert app.title == settings.site_name
 
 
 def test_surgeon_pages_hide_seed_content_until_hydrated_and_never_default_to_mara():
@@ -160,6 +166,8 @@ def test_password_reset_sends_smtp_message(monkeypatch):
         assert outbox.state == "sent"
         assert json.loads(outbox.payload_json) == {"delivered": True}
     assert sent[0]["To"] == "juniper@example.com"
+    assert settings.site_name in sent[0]["Subject"]
+    assert settings.site_name in sent[0].get_content()
     assert "/reset-password.html#token=" in sent[0].get_content()
     assert sent[0]["Resend-Idempotency-Key"].startswith("password-reset/")
 
