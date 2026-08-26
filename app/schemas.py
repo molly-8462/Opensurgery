@@ -2,13 +2,19 @@ from datetime import date
 from decimal import Decimal
 import uuid
 
+from typing import Annotated
+
 from pydantic import BaseModel, EmailStr, Field, HttpUrl
+
+
+# This is the single backend-owned policy for every operation that sets a password.
+Password = Annotated[str, Field(min_length=8, max_length=128)]
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
     display_name: str = Field(min_length=3, max_length=30, pattern=r"^[A-Za-z0-9_-]+$")
-    password: str = Field(min_length=8, max_length=128)
+    password: Password
     approximate_region: str | None = Field(default=None, max_length=160)
 
 
@@ -23,7 +29,7 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetConfirm(BaseModel):
     token: str = Field(min_length=32, max_length=300)
-    password: str = Field(min_length=8, max_length=128)
+    password: Password
 
 
 class ReviewCreate(BaseModel):

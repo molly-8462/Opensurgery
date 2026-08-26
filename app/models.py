@@ -46,6 +46,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     display_name: Mapped[str] = mapped_column(String(30), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
+    session_version: Mapped[int] = mapped_column(Integer, default=0)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.member)
     bio: Mapped[str | None] = mapped_column(Text)
     approximate_region: Mapped[str | None] = mapped_column(String(160))

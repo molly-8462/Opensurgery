@@ -906,6 +906,31 @@ if (pageName === "forgot-password.html") {
   });
 }
 
+if (pageName === "reset-password.html") {
+  const form = document.querySelector("[data-password-reset-confirm]");
+  const token = new URLSearchParams(window.location.hash.slice(1)).get("token");
+  history.replaceState(null, "", "reset-password.html");
+  if (!token) {
+    form.querySelector(".form-status").textContent = "This reset link is incomplete. Request a new one.";
+    form.querySelector("button").disabled = true;
+  }
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const status = form.querySelector(".form-status");
+    if (form.elements.password.value !== form.elements.confirm_password.value) {
+      status.textContent = "The passwords do not match.";
+      return;
+    }
+    try {
+      await apiRequest("/auth/password-reset/confirm", { method: "POST", body: JSON.stringify({ token, password: form.elements.password.value }) });
+      localStorage.removeItem("opensurgery_user");
+      form.reset();
+      form.querySelector("button").disabled = true;
+      status.innerHTML = 'Password updated. <a href="login.html">Log in with your new password.</a>';
+    } catch (error) { status.textContent = error.message; }
+  });
+}
+
 if (pageName === "edit.html") {
   const slug = selectedSurgeonSlug(); const form = document.querySelector("#edit-form");
   if (!slug) window.location.replace("directory.html"); else

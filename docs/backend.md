@@ -50,6 +50,8 @@ are strictly development fixtures and must not be loaded in production.
 
 Public reads never expose email addresses, password hashes, private moderator details, or message
 contents. Authenticated browser sessions use signed, HTTP-only, SameSite cookies; the API also
-accepts bearer tokens for non-browser clients. Writes that create reviews, proposals, and messages require authentication. Production
-deployment must add reverse-proxy TLS, request rate limiting, object storage, background workers,
-email delivery, secret management, backups, and a documented retention policy.
+accepts bearer tokens for non-browser clients. Writes that create reviews, proposals, and messages
+require authentication. Password-reset delivery uses Resend's SMTP relay and the `SMTP_*`
+environment variables; `SMTP_PASSWORD` holds the Resend API key. Production
+deployment must add reverse-proxy TLS, request rate limiting, object storage, a pending-outbox retry
+worker, secret management, backups, and a documented retention policy.

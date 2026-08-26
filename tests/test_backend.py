@@ -4,9 +4,10 @@ from pathlib import Path
 os.environ["DATABASE_URL"] = "sqlite:////tmp/opensurgery-pytest.db"
 
 from sqlalchemy import func, select
-from fastapi import Response
+from fastapi import BackgroundTasks, Response
 
 import json
+from urllib.parse import parse_qs, urlparse
 import pytest
 from fastapi import HTTPException
 
@@ -16,12 +17,12 @@ from app.api import (admin_user, approve_proposal, approve_surgeon, ban_user, co
                      remove_review, reply_to_conversation, request_password_reset, restore_surgeon, send_message,
                      surgeon, surgeon_reviews, surgeons, update_me, update_user_role)
 from app.database import Base, SessionLocal, engine
-from app.models import AuditEvent, EmailOutbox, MediaAsset, ModerationState, ProposalSource, Review, ReviewPhoto, ReviewRating, Surgeon, SurgeonRevision, User, UserRole
+from app.models import AccountToken, AuditEvent, EmailOutbox, MediaAsset, ModerationState, ProposalSource, Review, ReviewPhoto, ReviewRating, Surgeon, SurgeonRevision, User, UserRole
 from app.schemas import (AdminAction, AdminRoleUpdate, LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm,
-                         PasswordResetRequest, ProposalCreate, ReviewCreate, SettingsUpdate,
+                         PasswordResetRequest, ProposalCreate, RegisterRequest, ReviewCreate, SettingsUpdate,
                          SurgeonCreate, SurgeonRemoval, TalkPost)
 from app.seed import seed
-from app.security import create_token, verify_password
+from app.security import create_token, current_user, verify_password
 from app.main import ASSETS_ROOT, PAGES_ROOT, PUBLIC_PAGES, surgeon_profile_page, surgeon_section_page
 
 
@@ -66,6 +67,34 @@ def test_clean_surgeon_routes_serve_the_correct_page_shells():
     with pytest.raises(HTTPException) as missing:
         surgeon_section_page("adrian-lee", "unknown")
     assert missing.value.status_code == 404
+    assert "reset-password.html" in PUBLIC_PAGES
+
+
+def test_backend_owns_shared_eight_character_password_policy():
+    from pydantic import ValidationError
+    for schema, fields in (
+        (RegisterRequest, {"email": "member@example.com", "display_name": "Member", "password": "short"}),
+        (PasswordResetConfirm, {"token": "x" * 32, "password": "short"}),
+    ):
+        with pytest.raises(ValidationError):
+            schema(**fields)
+
+
+def test_pre_session_version_tokens_survive_migration_until_password_reset():
+    import jwt
+    from datetime import datetime, timedelta, timezone
+    from fastapi.security import HTTPAuthorizationCredentials
+    from app.config import settings
+
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.email == "river@example.com"))
+        legacy_token = jwt.encode(
+            {"sub": str(user.id), "role": user.role.value, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
+            settings.secret_key,
+            algorithm="HS256",
+        )
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=legacy_token)
+        assert current_user(type("Request", (), {"cookies": {}})(), credentials, db).id == user.id
 
 
 def test_user_password_and_profile_privacy_boundary():
@@ -84,12 +113,55 @@ def test_user_password_and_profile_privacy_boundary():
 
 def test_password_reset_uses_hashed_single_use_token_and_outbox():
     with SessionLocal() as db:
-        request_password_reset(PasswordResetRequest(email="river@example.com"), db)
+        request_password_reset(PasswordResetRequest(email="river@example.com"), BackgroundTasks(), db)
         queued = db.scalar(select(EmailOutbox).where(EmailOutbox.template == "password_reset"))
-        raw_token = json.loads(queued.payload_json)["token"]
-        confirm_password_reset(PasswordResetConfirm(token=raw_token, password="new-prototype-password"), db)
+        reset_url = json.loads(queued.payload_json)["reset_url"]
+        raw_token = parse_qs(urlparse(reset_url).fragment)["token"][0]
+        stored_token = db.scalar(select(AccountToken).where(AccountToken.user_id == queued.recipient_user_id))
+        assert raw_token not in stored_token.token_hash
         user = db.scalar(select(User).where(User.email == "river@example.com"))
+        old_session = create_token(user)
+        confirm_password_reset(PasswordResetConfirm(token=raw_token, password="new-prototype-password"), db)
         assert verify_password("new-prototype-password", user.password_hash)
+        with pytest.raises(HTTPException) as reused:
+            confirm_password_reset(PasswordResetConfirm(token=raw_token, password="another-password"), db)
+        assert reused.value.status_code == 400
+        from fastapi.security import HTTPAuthorizationCredentials
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=old_session)
+        with pytest.raises(HTTPException) as revoked:
+            current_user(type("Request", (), {"cookies": {}})(), credentials, db)
+        assert revoked.value.status_code == 401
+
+
+def test_password_reset_sends_smtp_message(monkeypatch):
+    import app.email as email_service
+
+    sent = []
+
+    class FakeSmtp:
+        def __init__(self, host, port, timeout):
+            assert (host, port, timeout) == ("smtp.example.test", 587, 10)
+        def __enter__(self): return self
+        def __exit__(self, *_): return None
+        def starttls(self): pass
+        def login(self, username, password): assert (username, password) == ("smtp-user", "smtp-password")
+        def send_message(self, message): sent.append(message)
+
+    monkeypatch.setattr(email_service.settings, "smtp_host", "smtp.example.test")
+    monkeypatch.setattr(email_service.settings, "smtp_username", "smtp-user")
+    monkeypatch.setattr(email_service.settings, "smtp_password", "smtp-password")
+    monkeypatch.setattr(email_service.smtplib, "SMTP", FakeSmtp)
+    with SessionLocal() as db:
+        tasks = BackgroundTasks()
+        request_password_reset(PasswordResetRequest(email="juniper@example.com"), tasks, db)
+        outbox = db.scalar(select(EmailOutbox).join(User).where(User.email == "juniper@example.com", EmailOutbox.template == "password_reset"))
+        assert len(tasks.tasks) == 1
+        email_service.deliver_password_reset(db, outbox.id)
+        assert outbox.state == "sent"
+        assert json.loads(outbox.payload_json) == {"delivered": True}
+    assert sent[0]["To"] == "juniper@example.com"
+    assert "/reset-password.html#token=" in sent[0].get_content()
+    assert sent[0]["Resend-Idempotency-Key"].startswith("password-reset/")
 
 
 def test_authenticated_browser_write_flows_persist_and_read_back():

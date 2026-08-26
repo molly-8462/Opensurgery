@@ -67,6 +67,19 @@ the containerized Compose deployment above.
 Open <http://127.0.0.1:8000>. API documentation is available at
 <http://127.0.0.1:8000/api/docs>.
 
+Password-reset email is configured for [Resend's SMTP relay](https://resend.com/docs/send-with-smtp).
+First verify your sending domain in Resend, then put the API key and a sender on that domain in the
+private `.env` file:
+
+```dotenv
+SMTP_PASSWORD=re_your_resend_api_key
+SMTP_FROM_ADDRESS=OpenSurgery <no-reply@your-domain.com>
+```
+
+The checked-in defaults use `smtp.resend.com`, port `587`, username `resend`, and STARTTLS. Never
+commit the real API key. Reset links expire after one hour, are single-use, and revoke existing
+sessions when used.
+
 Run the test suite with:
 
 ```bash

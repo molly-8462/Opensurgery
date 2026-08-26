@@ -6,13 +6,14 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .database import get_db
+from .email import deliver_password_reset_by_id
 from .config import settings
 from .countries import COUNTRIES, country_code
 from .models import (AccountToken, AuditEvent, Conversation, ConversationMember, EditProposal, EmailOutbox, Location, MediaAsset, Message,
@@ -72,22 +73,30 @@ def logout(response: Response):
 
 
 @router.post("/auth/password-reset", status_code=202)
-def request_password_reset(payload: PasswordResetRequest, db: Session = Depends(get_db)):
+def request_password_reset(payload: PasswordResetRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(func.lower(User.email) == payload.email.lower(), User.is_active.is_(True)))
     if user:
         raw = secrets.token_urlsafe(48); digest = hashlib.sha256(raw.encode()).hexdigest()
+        db.execute(delete(AccountToken).where(AccountToken.user_id == user.id, AccountToken.purpose == "password_reset", AccountToken.used_at.is_(None)))
         db.add(AccountToken(user_id=user.id, purpose="password_reset", token_hash=digest, expires_at=datetime.now(timezone.utc) + timedelta(hours=1)))
-        db.add(EmailOutbox(recipient_user_id=user.id, template="password_reset", payload_json=json.dumps({"token": raw})))
-        db.commit()
-    return {"message": "If the account exists, reset instructions have been queued."}
+        # A URL fragment keeps the secret out of HTTP request lines, access logs, and referrers.
+        reset_url = f"{settings.public_base_url.rstrip('/')}/reset-password.html#token={raw}"
+        outbox = EmailOutbox(recipient_user_id=user.id, template="password_reset", payload_json=json.dumps({"reset_url": reset_url}))
+        db.add(outbox); db.commit()
+        background_tasks.add_task(deliver_password_reset_by_id, outbox.id)
+    return {"message": "If an active account exists for that email, a reset link will arrive shortly."}
 
 
 @router.post("/auth/password-reset/confirm")
 def confirm_password_reset(payload: PasswordResetConfirm, db: Session = Depends(get_db)):
     digest = hashlib.sha256(payload.token.encode()).hexdigest(); current = datetime.now(timezone.utc)
-    token = db.scalar(select(AccountToken).where(AccountToken.token_hash == digest, AccountToken.purpose == "password_reset", AccountToken.used_at.is_(None), AccountToken.expires_at > current))
+    token = db.scalar(select(AccountToken).where(AccountToken.token_hash == digest, AccountToken.purpose == "password_reset", AccountToken.used_at.is_(None), AccountToken.expires_at > current).with_for_update())
     if not token: raise HTTPException(400, "Invalid or expired reset token")
-    user = db.get(User, token.user_id); user.password_hash = hash_password(payload.password); token.used_at = current
+    user = db.get(User, token.user_id)
+    if not user or not user.is_active or user.deleted_at:
+        raise HTTPException(400, "Invalid or expired reset token")
+    user.password_hash = hash_password(payload.password); user.session_version += 1; token.used_at = current
+    db.execute(delete(AccountToken).where(AccountToken.user_id == user.id, AccountToken.purpose == "password_reset", AccountToken.id != token.id))
     db.add(AuditEvent(actor_id=user.id, action="account.password_reset", target_type="user", target_id=user.id)); db.commit()
     return {"message": "Password updated"}
 
