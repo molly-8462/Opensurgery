@@ -54,4 +54,17 @@ def review_data(db: Session, review: Review) -> dict:
         "published_at": review.published_at.isoformat() if review.published_at else None,
         "updated_at": review.updated_at.isoformat(), "long_term_status": long_term_status,
         "ratings": [{"slug": row.slug, "label": row.label, "value": row.value} for row in ratings],
+        "photos": [
+            {
+                "id": p.id,
+                "url": f"/api/v1/media/{p.media_id}",
+                "capture_date": p.capture_date.isoformat() if p.capture_date else None,
+                "caption": p.caption,
+                "visibility": p.visibility.value if hasattr(p.visibility, "value") else str(p.visibility),
+                "content_warning": p.content_warning,
+                "designated_long_term": p.designated_long_term,
+                "approved_at": p.approved_at.isoformat() if p.approved_at else None,
+            }
+            for p in photos
+        ],
     }

@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Change this one value to update user-visible backend branding everywhere.
-    site_name: str = "transdoc.wiki"
+    site_name: str = "OpenSurgery"
     database_url: str = "postgresql+psycopg://opensurgery:opensurgery@localhost:5432/opensurgery"
     secret_key: str = "development-only-change-me-before-deployment"
     access_token_minutes: int = 30

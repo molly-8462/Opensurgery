@@ -677,6 +677,12 @@ if (pageName === "profile.html") {
     document.querySelectorAll("[data-profile-name]").forEach((node) => { node.textContent = profile.display_name; });
     document.querySelectorAll("[data-profile-initial]").forEach((node) => { node.textContent = profile.display_name[0]; });
     const bio = document.querySelector(".profile-about > p"); if (bio) bio.textContent = profile.bio || "This member has not added a bio.";
+    const activityNodes = document.querySelectorAll(".profile-layout aside dd");
+    if (activityNodes.length >= 3) {
+      activityNodes[0].textContent = profile.reviews_count ?? 0;
+      activityNodes[1].textContent = profile.edits_count ?? 0;
+      activityNodes[2].textContent = profile.talk_count ?? 0;
+    }
   });
   if (user) apiRequest("/me").then((viewer) => {
     if (viewer.role !== "admin") return;
@@ -712,7 +718,7 @@ if (pageName === "practice.html") {
 
 if (pageName === "pending.html") {
   apiRequest("/proposals").then((data) => {
-    const list = document.querySelector(".proposal-list"); list.innerHTML = data.items.map((proposal) => `<article><span>${escapeHtml(proposal.state)}</span><h2>${escapeHtml(proposal.summary)}</h2><p><a href="${surgeonUrl(proposal.surgeon.slug)}">${escapeHtml(proposal.surgeon.name)}</a> · Proposed by ${escapeHtml(proposal.author)}</p></article>`).join("");
+    const list = document.querySelector(".proposal-list"); list.innerHTML = data.items.map((proposal) => `<article data-proposal-id="${proposal.id}"><span>${escapeHtml(proposal.state)}</span><h2>${escapeHtml(proposal.summary)}</h2><p><a href="${surgeonUrl(proposal.surgeon.slug)}">${escapeHtml(proposal.surgeon.name)}</a> · Proposed by ${escapeHtml(proposal.author)}</p></article>`).join("");
     apiRequest("/me").then((user) => {
       if (!["trusted_editor", "moderator", "admin"].includes(user.role)) return;
       apiRequest("/moderation/surgeons").then((submissions) => {
@@ -722,6 +728,23 @@ if (pageName === "pending.html") {
           try {
             const result = await apiRequest(`/moderation/surgeons/${article.dataset.surgeonSubmission}/approve`, { method: "POST" });
             article.innerHTML = `<span>Published</span><h2>Profile approved</h2><p><a href="${surgeonUrl(result.slug)}">Open the published profile</a></p>`;
+          } catch (error) { button.insertAdjacentHTML("afterend", `<p class="form-status">${escapeHtml(error.message)}</p>`); }
+        }));
+      });
+      apiRequest("/moderation/reviews").then((reviews) => {
+        reviews.items.forEach((item) => list.insertAdjacentHTML("beforeend", `<article data-review-submission="${item.id}"><span>Pending review</span><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.surgeon_name)} · ${escapeHtml(item.procedure_name)} · By ${escapeHtml(item.reviewer_name)}</p><blockquote>${escapeHtml(item.narrative)}</blockquote><div><button class="primary-button" type="button" data-approve-review>Approve review</button> <button class="secondary-button" type="button" data-reject-review>Reject review</button></div></article>`));
+        list.querySelectorAll("[data-approve-review]").forEach((button) => button.addEventListener("click", async () => {
+          const article = button.closest("[data-review-submission]");
+          try {
+            const result = await apiRequest(`/moderation/reviews/${article.dataset.reviewSubmission}/approve`, { method: "POST" });
+            article.innerHTML = `<span>Published</span><h2>Review approved</h2>`;
+          } catch (error) { button.insertAdjacentHTML("afterend", `<p class="form-status">${escapeHtml(error.message)}</p>`); }
+        }));
+        list.querySelectorAll("[data-reject-review]").forEach((button) => button.addEventListener("click", async () => {
+          const article = button.closest("[data-review-submission]");
+          try {
+            await apiRequest(`/moderation/reviews/${article.dataset.reviewSubmission}/reject`, { method: "POST" });
+            article.innerHTML = `<span>Rejected</span><h2>Review rejected</h2>`;
           } catch (error) { button.insertAdjacentHTML("afterend", `<p class="form-status">${escapeHtml(error.message)}</p>`); }
         }));
       });
@@ -773,7 +796,7 @@ if (pageName === "write-review.html") {
         }
         const month = String(data.get("surgery_month") || "");
         const longTerm = uploadedMedia.find((item) => item.name === "long_term_photo");
-        const result = await apiRequest("/reviews", { method: "POST", body: JSON.stringify({ surgeon_slug: data.get("surgeon_slug"), procedure_slug: data.get("procedure_slug"), technique_slug: data.get("technique_slug") || null, surgery_date: month ? `${month}-01` : null, surgery_date_precision: "month", location_text: data.get("location") || null, title: data.get("title"), narrative: data.get("narrative"), complications_status: complicationValues[data.get("complications_status")] || "prefer_not_to_say", media_ids: uploadedMedia.map((item) => item.id), designated_long_term_media_id: longTerm && data.get("long_term_confirmed") ? longTerm.id : null }) });
+        const result = await apiRequest("/reviews", { method: "POST", body: JSON.stringify({ surgeon_slug: data.get("surgeon_slug"), procedure_slug: data.get("procedure_slug"), technique_slug: data.get("technique_slug") || null, surgery_date: month ? `${month}-01` : null, surgery_date_precision: "month", location_text: data.get("location") || null, cost_includes: data.get("insurance") || null, title: data.get("title"), narrative: data.get("narrative"), complications_status: complicationValues[data.get("complications_status")] || "prefer_not_to_say", media_ids: uploadedMedia.map((item) => item.id), designated_long_term_media_id: longTerm && data.get("long_term_confirmed") ? longTerm.id : null }) });
         form.querySelector(".form-status").textContent = `Review saved with status: ${result.state}.`;
       } catch (error) { form.querySelector(".form-status").textContent = error.message; }
     });

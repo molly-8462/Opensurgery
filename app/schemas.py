@@ -44,6 +44,7 @@ class ReviewCreate(BaseModel):
     cost_amount: Decimal | None = Field(default=None, ge=0)
     cost_currency: str | None = Field(default=None, min_length=3, max_length=3)
     cost_includes: str | None = None
+    wait_time_days: int | None = Field(default=None, ge=0)
     narrative: str = Field(min_length=20, max_length=30000)
     complications_status: str = "prefer_not_to_say"
     complications_detail: str | None = None

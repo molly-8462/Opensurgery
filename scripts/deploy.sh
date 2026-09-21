@@ -1,15 +1,11 @@
-
 #!/usr/bin/env bash
-
-cd /home/ubuntu/docker/surgery-website/Bomboclat
-
 set -Eeuo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 echo "Creating pre-deployment backup..."
-./home/ubuntu/docker/open-surgery/scripts/backup.sh
+"$PROJECT_DIR/scripts/backup.sh"
 
 
 echo "Pulling application changes..."

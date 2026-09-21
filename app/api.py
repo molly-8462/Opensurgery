@@ -19,7 +19,7 @@ from .countries import COUNTRIES, country_code
 from .models import (AccountToken, AuditEvent, Conversation, ConversationMember, EditProposal, EmailOutbox, Location, MediaAsset, Message,
                      ModerationState, Practice, Procedure, ProposalSource, RatingDimension, Report, Review, ReviewPhoto, ReviewRating,
                      RevisionKind, RevisionSource, Source, Surgeon,
-                     SurgeonPractice, SurgeonRevision, TalkComment, TalkTopic, Technique, User, UserRole, surgeon_procedures)
+                     SurgeonPractice, SurgeonRevision, TalkComment, TalkTopic, Technique, User, UserBlock, UserRole, surgeon_procedures)
 from .schemas import (AdminAction, AdminRoleUpdate, LoginRequest, MessageCreate, MessageReply, PasswordResetConfirm, PasswordResetRequest,
                       ProposalCreate, RegisterRequest, ReportCreate, ReviewCreate, SettingsUpdate,
                       SurgeonCreate, SurgeonRemoval, TalkPost)
@@ -169,6 +169,17 @@ def ban_user(display_name: str, payload: AdminAction, admin: User = Depends(curr
     db.commit(); return {"display_name": user.display_name, "status": "banned"}
 
 
+@router.post("/admin/users/{display_name}/unban")
+def unban_user(display_name: str, admin: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_admin(admin)
+    user = db.scalar(select(User).where(func.lower(User.display_name) == display_name.lower()))
+    if not user: raise HTTPException(404, "User not found")
+    if user.is_active: raise HTTPException(409, "User is not banned")
+    user.is_active = True; user.banned_at = None; user.banned_by_id = None; user.ban_reason = None
+    db.add(AuditEvent(actor_id=admin.id, action="user.unbanned", target_type="user", target_id=user.id))
+    db.commit(); return {"display_name": user.display_name, "status": "active"}
+
+
 @router.get("/surgeons")
 def surgeons(q: str | None = None, country: str | None = None, procedure: str | None = None, db: Session = Depends(get_db)):
     stmt = select(Surgeon).where(Surgeon.is_published.is_(True)).order_by(Surgeon.updated_at.desc())
@@ -177,9 +188,12 @@ def surgeons(q: str | None = None, country: str | None = None, procedure: str | 
         selected_country = country_code(country)
         if not selected_country: return {"items": [], "total": 0}
         stmt = stmt.where(Surgeon.country_code == selected_country)
+    if procedure:
+        stmt = stmt.join(surgeon_procedures, surgeon_procedures.c.surgeon_id == Surgeon.id).join(Procedure, Procedure.id == surgeon_procedures.c.procedure_id).where(
+            or_(Procedure.slug == procedure, Procedure.name == procedure)
+        ).distinct()
     records = db.scalars(stmt).all()
     result = [surgeon_summary(db, record) for record in records]
-    if procedure: result = [x for x in result if any(p["slug"] == procedure or p["name"] == procedure for p in x["procedures"])]
     return {"items": result, "total": len(result)}
 
 
@@ -272,6 +286,84 @@ def restore_surgeon(slug: str, user: User = Depends(current_user), db: Session =
     db.add(AuditEvent(actor_id=user.id, action="surgeon.restored", target_type="surgeon", target_id=record.id,
                       public_detail=f"Restored {record.display_name}"))
     db.commit(); return {"slug": record.slug, "status": record.lifecycle_status}
+
+
+@router.get("/moderation/reviews")
+def pending_reviews(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    reviews = db.scalars(select(Review).where(Review.state == ModerationState.pending).order_by(Review.created_at)).all()
+    items = []
+    for r in reviews:
+        surgeon = db.get(Surgeon, r.surgeon_id)
+        reviewer = db.get(User, r.reviewer_id) if r.reviewer_id else None
+        procedure = db.get(Procedure, r.procedure_id)
+        photos = db.scalars(select(ReviewPhoto).where(ReviewPhoto.review_id == r.id)).all()
+        items.append({
+            "id": r.id,
+            "slug": r.slug,
+            "title": r.title,
+            "narrative": r.narrative,
+            "surgeon_name": surgeon.display_name if surgeon else "Unknown",
+            "procedure_name": procedure.name if procedure else "Unknown",
+            "reviewer_name": reviewer.display_name if reviewer else "Anonymous",
+            "created_at": r.created_at,
+            "photos": [{"id": p.id, "media_id": p.media_id, "approved_at": p.approved_at, "designated_long_term": p.designated_long_term} for p in photos]
+        })
+    return {"items": items}
+
+
+@router.post("/moderation/reviews/{review_id}/approve")
+def approve_review(review_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    review = db.get(Review, review_id)
+    if not review or review.state != ModerationState.pending:
+        raise HTTPException(404, "Pending review not found")
+    review.state = ModerationState.published
+    review.published_at = datetime.now(timezone.utc)
+    photos = db.scalars(select(ReviewPhoto).where(ReviewPhoto.review_id == review.id)).all()
+    for photo in photos:
+        if not photo.approved_at:
+            photo.approved_at = datetime.now(timezone.utc)
+    db.add(AuditEvent(actor_id=user.id, action="review.approved", target_type="review", target_id=review.id))
+    db.commit()
+    return {"id": review.id, "slug": review.slug, "state": review.state}
+
+
+@router.post("/moderation/reviews/{review_id}/reject")
+def reject_review(review_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    review = db.get(Review, review_id)
+    if not review or review.state != ModerationState.pending:
+        raise HTTPException(404, "Pending review not found")
+    review.state = ModerationState.rejected
+    db.add(AuditEvent(actor_id=user.id, action="review.rejected", target_type="review", target_id=review.id))
+    db.commit()
+    return {"id": review.id, "state": review.state}
+
+
+@router.post("/moderation/photos/{photo_id}/approve")
+def approve_photo(photo_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    photo = db.get(ReviewPhoto, photo_id)
+    if not photo:
+        raise HTTPException(404, "Photo not found")
+    photo.approved_at = datetime.now(timezone.utc)
+    db.add(AuditEvent(actor_id=user.id, action="photo.approved", target_type="review_photo", target_id=photo.id))
+    db.commit()
+    return {"id": photo.id, "approved_at": photo.approved_at}
+
+
+@router.post("/moderation/photos/{photo_id}/reject")
+def reject_photo(photo_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    photo = db.get(ReviewPhoto, photo_id)
+    if not photo:
+        raise HTTPException(404, "Photo not found")
+    photo.approved_at = None
+    db.add(AuditEvent(actor_id=user.id, action="photo.rejected", target_type="review_photo", target_id=photo.id))
+    db.commit()
+    return {"id": photo.id, "approved_at": None}
+
 
 
 @router.get("/surgeons/{slug}")
@@ -422,17 +514,34 @@ def proposals(db: Session = Depends(get_db)):
 def profile(display_name: str, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(func.lower(User.display_name) == display_name.lower(), User.is_active.is_(True)))
     if not user: raise HTTPException(404, "User not found")
-    return {"display_name": user.display_name, "bio": user.bio, "approximate_region": user.approximate_region, "allow_messages": user.allow_messages, "member_since": user.created_at.date()}
+    reviews_count = db.scalar(select(func.count()).select_from(Review).where(Review.reviewer_id == user.id, Review.state == ModerationState.published)) or 0
+    edits_count = db.scalar(select(func.count()).select_from(SurgeonRevision).where(SurgeonRevision.author_id == user.id)) or 0
+    talk_count = db.scalar(select(func.count()).select_from(TalkComment).where(TalkComment.author_id == user.id)) or 0
+    return {"display_name": user.display_name, "bio": user.bio, "approximate_region": user.approximate_region, "allow_messages": user.allow_messages, "member_since": user.created_at.date(), "reviews_count": reviews_count, "edits_count": edits_count, "talk_count": talk_count}
+
+
+def check_block_status(db: Session, user_a_id: uuid.UUID, user_b_id: uuid.UUID) -> None:
+    blocked = db.scalar(select(UserBlock).where(or_((UserBlock.blocker_id == user_a_id) & (UserBlock.blocked_id == user_b_id), (UserBlock.blocker_id == user_b_id) & (UserBlock.blocked_id == user_a_id))))
+    if blocked: raise HTTPException(403, "Messaging is blocked between these accounts")
 
 
 @router.post("/messages", status_code=201)
 def send_message(payload: MessageCreate, sender: User = Depends(current_user), db: Session = Depends(get_db)):
     recipient = db.scalar(select(User).where(func.lower(User.display_name) == payload.recipient.lower()))
     if not recipient or not recipient.allow_messages: raise HTTPException(403, "This member is not accepting messages")
-    conversation = Conversation(); db.add(conversation); db.flush()
-    db.add_all([ConversationMember(conversation_id=conversation.id,user_id=sender.id), ConversationMember(conversation_id=conversation.id,user_id=recipient.id), Message(conversation_id=conversation.id,sender_id=sender.id,body=payload.body)])
-    if recipient.email_message_notifications: db.add(EmailOutbox(recipient_user_id=recipient.id, template="new_message", payload_json=json.dumps({"conversation_id": str(conversation.id)})))
-    db.commit(); return {"conversation_id": conversation.id}
+    if recipient.id == sender.id: raise HTTPException(400, "Cannot send a message to yourself")
+    check_block_status(db, sender.id, recipient.id)
+    if recipient.allow_new_accounts is False:
+        sender_created = sender.created_at.replace(tzinfo=timezone.utc) if sender.created_at and sender.created_at.tzinfo is None else sender.created_at
+        if sender_created and (datetime.now(timezone.utc) - sender_created) < timedelta(days=7):
+            raise HTTPException(403, "This member does not accept messages from new accounts")
+    conv_id = db.scalar(select(ConversationMember.conversation_id).where(ConversationMember.user_id.in_([sender.id, recipient.id])).group_by(ConversationMember.conversation_id).having(func.count(ConversationMember.user_id) == 2))
+    if not conv_id:
+        conversation = Conversation(); db.add(conversation); db.flush(); conv_id = conversation.id
+        db.add_all([ConversationMember(conversation_id=conv_id, user_id=sender.id), ConversationMember(conversation_id=conv_id, user_id=recipient.id)])
+    db.add(Message(conversation_id=conv_id, sender_id=sender.id, body=payload.body))
+    if recipient.email_message_notifications: db.add(EmailOutbox(recipient_user_id=recipient.id, template="new_message", payload_json=json.dumps({"conversation_id": str(conv_id)})))
+    db.commit(); return {"conversation_id": conv_id}
 
 
 @router.get("/conversations")
@@ -458,20 +567,84 @@ def conversation_messages(conversation_id: uuid.UUID, user: User = Depends(curre
 @router.post("/conversations/{conversation_id}/messages", status_code=201)
 def reply_to_conversation(conversation_id: uuid.UUID, payload: MessageReply, user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not db.get(ConversationMember, {"conversation_id": conversation_id, "user_id": user.id}): raise HTTPException(404, "Conversation not found")
+    other_members = db.scalars(select(User).join(ConversationMember, ConversationMember.user_id == User.id).where(ConversationMember.conversation_id == conversation_id, User.id != user.id)).all()
+    for other in other_members:
+        if not other.allow_messages: raise HTTPException(403, f"{other.display_name} is not accepting messages")
+        check_block_status(db, user.id, other.id)
     message = Message(conversation_id=conversation_id, sender_id=user.id, body=payload.body); db.add(message)
-    recipients = db.scalars(select(User).join(ConversationMember, ConversationMember.user_id == User.id).where(ConversationMember.conversation_id == conversation_id, User.id != user.id, User.email_message_notifications.is_(True))).all()
-    for recipient in recipients: db.add(EmailOutbox(recipient_user_id=recipient.id, template="new_message", payload_json=json.dumps({"conversation_id": str(conversation_id)})))
+    for other in other_members:
+        if other.email_message_notifications: db.add(EmailOutbox(recipient_user_id=other.id, template="new_message", payload_json=json.dumps({"conversation_id": str(conversation_id)})))
     db.commit()
     return {"id": message.id, "created_at": message.created_at}
+
+
+@router.post("/users/{display_name}/block")
+def block_user(display_name: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    target = db.scalar(select(User).where(func.lower(User.display_name) == display_name.lower(), User.is_active.is_(True)))
+    if not target: raise HTTPException(404, "User not found")
+    if target.id == user.id: raise HTTPException(400, "Cannot block yourself")
+    existing = db.get(UserBlock, {"blocker_id": user.id, "blocked_id": target.id})
+    if not existing:
+        db.add(UserBlock(blocker_id=user.id, blocked_id=target.id))
+        db.add(AuditEvent(actor_id=user.id, action="user.blocked", target_type="user", target_id=target.id))
+        db.commit()
+    return {"status": "blocked", "display_name": target.display_name}
+
+
+@router.post("/users/{display_name}/unblock")
+def unblock_user(display_name: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    target = db.scalar(select(User).where(func.lower(User.display_name) == display_name.lower()))
+    if not target: raise HTTPException(404, "User not found")
+    existing = db.get(UserBlock, {"blocker_id": user.id, "blocked_id": target.id})
+    if existing:
+        db.delete(existing)
+        db.add(AuditEvent(actor_id=user.id, action="user.unblocked", target_type="user", target_id=target.id))
+        db.commit()
+    return {"status": "unblocked", "display_name": target.display_name}
 
 
 @router.post("/reports", status_code=201)
 def create_report(payload: ReportCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
     try: target_id = uuid.UUID(payload.target_id)
     except ValueError: raise HTTPException(400, "Invalid target id")
+    if payload.target_type == "surgeon" and not db.get(Surgeon, target_id): raise HTTPException(400, "Target surgeon does not exist")
+    elif payload.target_type == "review" and not db.get(Review, target_id): raise HTTPException(400, "Target review does not exist")
+    elif payload.target_type == "user" and not db.get(User, target_id): raise HTTPException(400, "Target user does not exist")
+    elif payload.target_type == "talk_comment" and not db.get(TalkComment, target_id): raise HTTPException(400, "Target talk comment does not exist")
     report = Report(reporter_id=user.id, target_type=payload.target_type, target_id=target_id, reason=payload.reason, details=payload.details)
     db.add(report); db.add(AuditEvent(actor_id=user.id, action="report.created", target_type=payload.target_type, target_id=target_id)); db.commit()
     return {"id": report.id, "state": report.state}
+
+
+@router.get("/moderation/reports")
+def list_reports(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    reports = db.scalars(select(Report).order_by(Report.created_at.desc())).all()
+    return {"items": [{"id": r.id, "target_type": r.target_type, "target_id": r.target_id, "reason": r.reason, "details": r.details, "state": r.state, "created_at": r.created_at} for r in reports]}
+
+
+@router.post("/moderation/reports/{report_id}/resolve")
+def resolve_report(report_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    report = db.get(Report, report_id)
+    if not report: raise HTTPException(404, "Report not found")
+    report.state = "resolved"
+    db.add(AuditEvent(actor_id=user.id, action="report.resolved", target_type="report", target_id=report.id))
+    db.commit()
+    return {"id": report.id, "state": report.state}
+
+
+@router.post("/moderation/proposals/{proposal_id}/reject")
+def reject_proposal(proposal_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    require_editor(user)
+    proposal = db.get(EditProposal, proposal_id)
+    if not proposal or proposal.state != ModerationState.pending: raise HTTPException(404, "Pending proposal not found")
+    proposal.state = ModerationState.rejected
+    proposal.decided_at = datetime.now(timezone.utc)
+    proposal.decided_by_id = user.id
+    db.add(AuditEvent(actor_id=user.id, action="proposal.rejected", target_type="edit_proposal", target_id=proposal.id))
+    db.commit()
+    return {"id": proposal.id, "state": proposal.state}
 
 
 @router.post("/media", status_code=201)
@@ -490,29 +663,50 @@ async def upload_media(file: UploadFile = File(...), user: User = Depends(curren
     db.add(asset); db.commit(); return {"id": asset.id, "processing_state": asset.processing_state}
 
 
+@router.get("/media/{media_id}")
+def serve_media(media_id: uuid.UUID, db: Session = Depends(get_db)):
+    asset = db.get(MediaAsset, media_id)
+    if not asset: raise HTTPException(404, "Media asset not found")
+    filepath = settings.media_root / (asset.safe_storage_key or asset.storage_key)
+    if not filepath.exists(): raise HTTPException(404, "Media file not found")
+    return FileResponse(filepath, media_type=asset.media_type)
+
+
 @router.post("/moderation/proposals/{proposal_id}/approve")
 def approve_proposal(proposal_id: uuid.UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
     require_editor(user)
     proposal = db.get(EditProposal, proposal_id)
     if not proposal or proposal.state != ModerationState.pending: raise HTTPException(404, "Pending proposal not found")
-    surgeon = db.get(Surgeon, proposal.surgeon_id)
-    latest = db.scalar(select(func.max(SurgeonRevision.revision_number)).where(SurgeonRevision.surgeon_id == surgeon.id)) or 0
-    revision = SurgeonRevision(surgeon_id=surgeon.id, revision_number=latest + 1, parent_revision_id=surgeon.current_revision_id, author_id=proposal.author_id, article_body=proposal.proposed_article_body, snapshot_json=proposal.proposed_snapshot_json, edit_summary=proposal.edit_summary, change_type="Article text", kind=RevisionKind.reviewed)
-    db.add(revision); db.flush(); surgeon.current_revision_id = revision.id; proposal.state = ModerationState.published; proposal.decided_at = datetime.now(timezone.utc); proposal.decided_by_id = user.id
+    surgeon = db.scalar(select(Surgeon).where(Surgeon.id == proposal.surgeon_id).with_for_update())
+    if not surgeon: raise HTTPException(404, "Surgeon not found")
+    if proposal.base_revision_id and proposal.base_revision_id != surgeon.current_revision_id:
+        raise HTTPException(409, "Proposal is based on a stale revision of the surgeon profile")
     snapshot = json.loads(proposal.proposed_snapshot_json)
-    for key in ("specialty", "city", "region", "website_url"):
-        if key in snapshot: setattr(surgeon, key, snapshot[key] or None)
     country = snapshot.get("country")
+    selected_country = None
     if country:
         selected_country = country_code(country)
         if not selected_country: raise HTTPException(400, "Proposal contains an unknown country")
-        surgeon.country_code = selected_country
     procedure_slugs = snapshot.get("procedure_slugs")
+    selected_procedures = []
     if procedure_slugs:
-        selected = db.scalars(select(Procedure).where(Procedure.slug.in_(procedure_slugs))).all()
-        if len(selected) != len(set(procedure_slugs)): raise HTTPException(400, "Proposal contains an unknown procedure")
-        db.execute(delete(surgeon_procedures).where(surgeon_procedures.c.surgeon_id == surgeon.id))
-        db.execute(surgeon_procedures.insert(), [{"surgeon_id": surgeon.id, "procedure_id": item.id} for item in selected])
-    for link in db.scalars(select(ProposalSource).where(ProposalSource.proposal_id == proposal.id)).all(): db.add(RevisionSource(revision_id=revision.id, source_id=link.source_id))
-    db.add(AuditEvent(actor_id=user.id, action="proposal.approved", target_type="edit_proposal", target_id=proposal.id, public_detail=proposal.edit_summary)); db.commit()
-    return {"revision_number": revision.revision_number}
+        selected_procedures = db.scalars(select(Procedure).where(Procedure.slug.in_(procedure_slugs))).all()
+        if len(selected_procedures) != len(set(procedure_slugs)): raise HTTPException(400, "Proposal contains an unknown procedure")
+    try:
+        latest = db.scalar(select(func.max(SurgeonRevision.revision_number)).where(SurgeonRevision.surgeon_id == surgeon.id)) or 0
+        revision = SurgeonRevision(surgeon_id=surgeon.id, revision_number=latest + 1, parent_revision_id=surgeon.current_revision_id, author_id=proposal.author_id, article_body=proposal.proposed_article_body, snapshot_json=proposal.proposed_snapshot_json, edit_summary=proposal.edit_summary, change_type="Article text", kind=RevisionKind.reviewed)
+        db.add(revision); db.flush()
+        surgeon.current_revision_id = revision.id; proposal.state = ModerationState.published; proposal.decided_at = datetime.now(timezone.utc); proposal.decided_by_id = user.id
+        for key in ("specialty", "city", "region", "website_url"):
+            if key in snapshot: setattr(surgeon, key, snapshot[key] or None)
+        if selected_country: surgeon.country_code = selected_country
+        if procedure_slugs:
+            db.execute(delete(surgeon_procedures).where(surgeon_procedures.c.surgeon_id == surgeon.id))
+            db.execute(surgeon_procedures.insert(), [{"surgeon_id": surgeon.id, "procedure_id": item.id} for item in selected_procedures])
+        for link in db.scalars(select(ProposalSource).where(ProposalSource.proposal_id == proposal.id)).all():
+            db.add(RevisionSource(revision_id=revision.id, source_id=link.source_id))
+        db.add(AuditEvent(actor_id=user.id, action="proposal.approved", target_type="edit_proposal", target_id=proposal.id, public_detail=proposal.edit_summary)); db.commit()
+        return {"revision_number": revision.revision_number}
+    except Exception:
+        db.rollback()
+        raise

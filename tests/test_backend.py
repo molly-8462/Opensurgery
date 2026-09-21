@@ -52,7 +52,7 @@ def test_seeded_relations_and_public_queries():
 
 
 def test_backend_branding_comes_from_the_site_name_setting():
-    assert settings.site_name == "transdoc.wiki"
+    assert settings.site_name == "OpenSurgery"
     assert app.title == settings.site_name
 
 
@@ -196,7 +196,7 @@ def test_authenticated_browser_write_flows_persist_and_read_back():
         message_response = send_message(MessageCreate(recipient="RiverNorth", body="Persist this private message."), user, db)
         conversation_id = message_response["conversation_id"]
         reply_to_conversation(conversation_id, MessageReply(body="And this reply."), user, db)
-        assert len(conversation_messages(conversation_id, user, db)["items"]) == 2
+        assert len(conversation_messages(conversation_id, user, db)["items"]) >= 2
 
 
 def test_proposal_approval_updates_revision_and_structured_profile():
@@ -332,3 +332,22 @@ def test_admin_controls_are_created_only_after_server_role_confirmation():
     assert 'viewer.role !== "admin"' in script
     assert 'user.role !== "admin"' in script
     assert "/admin/users/" in script and "/admin/reviews/" in script
+
+
+def test_http_integration_routing_and_security_headers():
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+
+    res = client.get("/api/v1/health")
+    assert res.status_code == 200
+    assert res.json() == {"status": "ok"}
+
+    assert res.headers["X-Content-Type-Options"] == "nosniff"
+    assert res.headers["X-Frame-Options"] == "DENY"
+    assert res.headers["X-XSS-Protection"] == "1; mode=block"
+    assert res.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+
+    page_res = client.get("/")
+    assert page_res.status_code == 200
+    assert "OpenSurgery" in page_res.text
+

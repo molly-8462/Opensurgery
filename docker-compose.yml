@@ -25,6 +25,7 @@ services:
         condition: service_healthy
         restart: true
     environment:
+      SITE_NAME: ${SITE_NAME:-OpenSurgery}
       DATABASE_URL: postgresql+psycopg://opensurgery:${POSTGRES_PASSWORD:-opensurgery}@db:5432/opensurgery
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-30}
